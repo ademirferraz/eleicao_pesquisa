@@ -4,14 +4,23 @@ import NotFound from "@/pages/NotFound";
 import { Route, Switch } from "wouter";
 import ErrorBoundary from "./components/ErrorBoundary";
 import { ThemeProvider } from "./contexts/ThemeContext";
-import Home from "./pages/Home";
-
+import Welcome from "./pages/Welcome";
+import Register from "./pages/Register";
+import Voting from "./pages/Voting";
+import AdminLogin from "./pages/AdminLogin";
+import AdminPanel from "./pages/AdminPanel";
+import Results from "./pages/Results";
 
 function Router() {
   return (
     <Switch>
-      <Route path={"/"} component={Home} />
-      <Route path={"/404"} component={NotFound} />
+      <Route path="/" component={Welcome} />
+      <Route path="/cadastro" component={Register} />
+      <Route path="/votacao" component={Voting} />
+      <Route path="/admin-login" component={AdminLogin} />
+      <Route path="/admin-panel" component={AdminPanel} />
+      <Route path="/resultados" component={Results} />
+      <Route path="/404" component={NotFound} />
       {/* Final fallback route */}
       <Route component={NotFound} />
     </Switch>

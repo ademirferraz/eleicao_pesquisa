@@ -45,3 +45,23 @@
 - [ ] Test on different browsers
 - [ ] Verify sound works everywhere
 - [ ] Performance optimization
+
+
+## Bug Fixes - Relatório de Correções Necessárias
+
+### Crítico - Download e Exibição
+- [x] Relatório: corrigir problema de download (não está sendo baixado) - CORRIGIDO: Suporta PNG e PDF
+- [x] Localidade do eleitor: exibir corretamente o município/bairro onde o eleitor mora - CORRIGIDO: Exibe Estado-Município-Bairro
+
+### Crítico - Gráficos e Filtros
+- [x] Gráfico de barras: aplicar cores distintas para cada barra - CORRIGIDO: 10 cores diferentes
+- [x] Botão "Limpar filtro": corrigir funcionalidade (atualmente não funciona) - CORRIGIDO: Funciona perfeitamente
+- [x] Filtro "Estado": garantir que todos os estados do Brasil apareçam na lista - CORRIGIDO: 27 estados
+
+### Crítico - Integração IBGE
+- [x] Gráfico de desempenho por município: incluir informação de bairro do eleitor via API IBGE - CORRIGIDO: API IBGE integrada
+- [x] Cadastro do eleitor: listar todos os bairros/regiões do município - CORRIGIDO: Carregamento dinâmico via IBGE
+
+### Crítico - Validação
+- [x] Cadastro duplicado: impedir que o eleitor se cadastre mais de uma vez - CORRIGIDO: Verificação de CPF no banco
+- [x] Integração com filtros: assegurar que "Limpar filtros" funcione para evitar duplicidade - CORRIGIDO: Filtros funcionando

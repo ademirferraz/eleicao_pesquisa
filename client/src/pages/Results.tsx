@@ -1,16 +1,27 @@
-import { useState, useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from 'react';
 import { useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
 import Layout from "@/components/Layout";
 import { ArrowLeft, Download, Share2, BarChart3, PieChart, TrendingUp, Filter, MapPin } from "lucide-react";
 import { 
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer,
-  PieChart as RePieChart, Pie, Cell, AreaChart, Area, LineChart, Line
+  PieChart as RePieChart, Pie, Cell, AreaChart, Area
 } from 'recharts';
 import { useToast } from "@/hooks/use-toast";
 import html2canvas from 'html2canvas';
+import jsPDF from 'jspdf';
 
-const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884d8', '#82ca9d'];
+// TODOS OS ESTADOS DO BRASIL
+const TODOS_ESTADOS = [
+  "Acre", "Alagoas", "Amapá", "Amazonas", "Bahia", "Ceará", "Distrito Federal",
+  "Espírito Santo", "Goiás", "Maranhão", "Mato Grosso", "Mato Grosso do Sul",
+  "Minas Gerais", "Pará", "Paraíba", "Paraná", "Pernambuco", "Piauí",
+  "Rio de Janeiro", "Rio Grande do Norte", "Rio Grande do Sul", "Rondônia",
+  "Roraima", "Santa Catarina", "São Paulo", "Sergipe", "Tocantins"
+];
+
+// CORES DISTINTAS PARA CADA CANDIDATO
+const COLORS = ['#FF6B6B', '#4ECDC4', '#45B7D1', '#FFA07A', '#98D8C8', '#F7DC6F', '#BB8FCE', '#85C1E2', '#F8B88B', '#A9DFBF'];
 
 export default function Results() {
   const [, setLocation] = useLocation();
@@ -30,7 +41,6 @@ export default function Results() {
   const [selectedEstado, setSelectedEstado] = useState("");
   const [selectedMunicipio, setSelectedMunicipio] = useState("");
   const [municipios, setMunicipios] = useState<any[]>([]);
-  const [estados, setEstados] = useState<any[]>([]);
 
   // Carregar dados iniciais
   useEffect(() => {
@@ -38,17 +48,13 @@ export default function Results() {
     setVotes(storedVotes);
     setFilteredVotes(storedVotes);
     processData(storedVotes);
-    
-    // Extrair estados únicos dos votos
-    const uniqueEstados = Array.from(new Set(storedVotes.map((v: any) => v.estadoNome))).filter(Boolean);
-    setEstados(uniqueEstados as any[]);
   }, []);
 
   // Atualizar municípios quando estado muda
   useEffect(() => {
     if (selectedEstado) {
       const votersInEstado = votes.filter((v: any) => v.estadoNome === selectedEstado);
-      const uniqueMunicipios = Array.from(new Set(votersInEstado.map((v: any) => v.municipioNome))).filter(Boolean);
+      const uniqueMunicipios = Array.from(new Set(votersInEstado.map((v: any) => v.municipioNome))).filter(Boolean).sort();
       setMunicipios(uniqueMunicipios as any[]);
       setSelectedMunicipio(""); // Limpar município
     } else {
@@ -83,22 +89,30 @@ export default function Results() {
       name, value
     })).sort((a: any, b: any) => b.value - a.value);
 
-    // 2. Por Bairro (GRANULARIDADE PRINCIPAL)
+    // 2. Por Bairro (GRANULARIDADE PRINCIPAL) - COM ESTADO E MUNICÍPIO
     const bairroCounts = data.reduce((acc: any, vote: any) => {
       const bairro = vote.bairro || 'N/A';
-      if (!acc[bairro]) acc[bairro] = 0;
-      acc[bairro]++;
+      const estado = vote.estadoNome || 'N/A';
+      const municipio = vote.municipioNome || 'N/A';
+      const key = `${estado} - ${municipio} - ${bairro}`;
+      
+      if (!acc[key]) acc[key] = 0;
+      acc[key]++;
       return acc;
     }, {});
 
     const byLocation = Object.entries(bairroCounts)
-      .map(([bairro, count]) => ({ location: bairro, count }))
+      .map(([location, count]) => ({ location, count }))
       .sort((a: any, b: any) => b.count - a.count)
-      .slice(0, 15); // Top 15 bairros
+      .slice(0, 15); // Top 15 localidades
 
     // 3. Desempenho por Candidato em Cada Bairro
     const candidateByLocation = data.reduce((acc: any, vote: any) => {
-      const location = vote.bairro || 'N/A';
+      const bairro = vote.bairro || 'N/A';
+      const estado = vote.estadoNome || 'N/A';
+      const municipio = vote.municipioNome || 'N/A';
+      const location = `${estado} - ${municipio} - ${bairro}`;
+      
       if (!acc[location]) acc[location] = {};
       acc[location][vote.candidateName] = (acc[location][vote.candidateName] || 0) + 1;
       return acc;
@@ -133,22 +147,51 @@ export default function Results() {
     setChartData({ byCandidate, byLocation, byMunicipio, timeline, candidateByLocation });
   };
 
+  // FIX #1: Corrigir download de relatório - Suportar PDF e PNG
   const handleDownload = async () => {
     if (reportRef.current) {
-      const canvas = await html2canvas(reportRef.current, {
-        backgroundColor: '#0f172a',
-        scale: 2
-      });
-      const link = document.createElement('a');
-      link.download = 'resultado-eleitoral.png';
-      link.href = canvas.toDataURL();
-      link.click();
-      
-      toast({
-        title: "Relatório Salvo",
-        description: "A imagem foi baixada para o seu dispositivo.",
-        className: "bg-green-600 text-white border-none"
-      });
+      try {
+        const canvas = await html2canvas(reportRef.current, {
+          backgroundColor: '#0f172a',
+          scale: 2,
+          logging: false,
+          useCORS: true
+        });
+        
+        // Opção 1: Download como PNG
+        const linkPNG = document.createElement('a');
+        linkPNG.download = `resultado-eleitoral-${new Date().toISOString().split('T')[0]}.png`;
+        linkPNG.href = canvas.toDataURL('image/png');
+        linkPNG.click();
+        
+        // Opção 2: Criar PDF também
+        const pdf = new jsPDF({
+          orientation: 'portrait',
+          unit: 'mm',
+          format: 'a4'
+        });
+        
+        const imgData = canvas.toDataURL('image/png');
+        const imgWidth = 210; // A4 width in mm
+        const pageHeight = 297; // A4 height in mm
+        const imgHeight = (canvas.height * imgWidth) / canvas.width;
+        
+        pdf.addImage(imgData, 'PNG', 0, 0, imgWidth, imgHeight);
+        pdf.save(`resultado-eleitoral-${new Date().toISOString().split('T')[0]}.pdf`);
+        
+        toast({
+          title: "✅ Relatório Baixado",
+          description: "Arquivo PNG e PDF foram salvos com sucesso!",
+          className: "bg-green-600 text-white border-none"
+        });
+      } catch (error) {
+        console.error('Erro ao baixar relatório:', error);
+        toast({
+          title: "❌ Erro",
+          description: "Não foi possível baixar o relatório. Tente novamente.",
+          className: "bg-red-600 text-white border-none"
+        });
+      }
     }
   };
 
@@ -170,9 +213,26 @@ export default function Results() {
     }
   };
 
+  // FIX #3: Corrigir botão "Limpar Filtros" - Agora funciona corretamente
+  const handleClearFilters = () => {
+    setSelectedEstado("");
+    setSelectedMunicipio("");
+    setMunicipios([]);
+    setFilteredVotes(votes);
+    processData(votes);
+    
+    toast({
+      title: "✅ Filtros Limpos",
+      description: "Exibindo todos os votos novamente.",
+      className: "bg-blue-600 text-white border-none"
+    });
+  };
+
   // Encontrar líder por localidade
   const getLeaderByLocation = (location: string) => {
     const candidates = chartData.candidateByLocation[location] || {};
+    if (Object.keys(candidates).length === 0) return 'N/A';
+    
     const leader = Object.entries(candidates).reduce((a: any, b: any) => 
       (b[1] as number) > (a[1] as number) ? b : a
     );
@@ -205,7 +265,7 @@ export default function Results() {
           </div>
         </div>
 
-        {/* Filtros */}
+        {/* FIX #3 & #4 & #5: Filtros com todos os estados e limpar funcionando */}
         <div className="bg-white/5 border border-white/10 rounded-xl p-6 mb-8">
           <div className="flex items-center gap-2 mb-4">
             <Filter className="w-5 h-5 text-blue-400" />
@@ -213,6 +273,7 @@ export default function Results() {
           </div>
           
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            {/* FIX #5: Filtro de Estado com TODOS os estados do Brasil */}
             <div>
               <label className="text-gray-300 text-sm block mb-2">Estado</label>
               <select
@@ -221,7 +282,7 @@ export default function Results() {
                 className="w-full bg-white/10 border border-white/20 text-white rounded-lg px-3 py-2"
               >
                 <option value="">Todos os Estados</option>
-                {estados.map((estado, idx) => (
+                {TODOS_ESTADOS.map((estado, idx) => (
                   <option key={idx} value={estado}>
                     {estado}
                   </option>
@@ -246,16 +307,14 @@ export default function Results() {
               </select>
             </div>
             
+            {/* FIX #3: Botão "Limpar Filtros" corrigido */}
             <div className="flex items-end">
               <Button 
-                onClick={() => {
-                  setSelectedEstado("");
-                  setSelectedMunicipio("");
-                }}
+                onClick={handleClearFilters}
                 variant="outline"
                 className="w-full bg-white/5 border-white/20 text-white hover:bg-white/10"
               >
-                Limpar Filtros
+                🔄 Limpar Filtros
               </Button>
             </div>
           </div>
@@ -299,7 +358,7 @@ export default function Results() {
                 </div>
                 <h3 className="text-purple-100 font-medium">Localidade Mais Ativa</h3>
               </div>
-              <p className="text-xl font-bold text-white truncate">
+              <p className="text-lg font-bold text-white truncate">
                 {chartData.byLocation[0]?.location || "N/A"}
               </p>
               <p className="text-purple-300/60 text-sm mt-1">{chartData.byLocation[0]?.count || 0} votos</p>
@@ -309,7 +368,7 @@ export default function Results() {
           {/* Gráficos Principais */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
             
-            {/* Gráfico de Barras - Candidatos */}
+            {/* FIX #2: Gráfico de Barras com CORES DISTINTAS para cada candidato */}
             <div className="bg-white/5 p-6 rounded-xl border border-white/10">
               <h3 className="text-white font-semibold mb-4 flex items-center gap-2">
                 <BarChart3 className="w-5 h-5 text-blue-400" />
@@ -325,7 +384,11 @@ export default function Results() {
                       contentStyle={{ backgroundColor: '#1e293b', border: '1px solid #ffffff20' }}
                       labelStyle={{ color: '#ffffff' }}
                     />
-                    <Bar dataKey="value" fill="#0088FE" />
+                    <Bar dataKey="value" fill="#0088FE">
+                      {chartData.byCandidate.map((_: any, index: number) => (
+                        <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                      ))}
+                    </Bar>
                   </BarChart>
                 </ResponsiveContainer>
               </div>
@@ -363,17 +426,17 @@ export default function Results() {
             </div>
           </div>
 
-          {/* Análise Regionalizada - Top Localidades */}
+          {/* FIX #2 & #6: Análise Regionalizada - Agora com Estado, Município e Bairro */}
           <div className="bg-white/5 p-6 rounded-xl border border-white/10">
             <h3 className="text-white font-semibold mb-4 flex items-center gap-2">
               <MapPin className="w-5 h-5 text-purple-400" />
-              Análise por Localidade (Estado - Município)
+              Análise por Localidade (Estado - Município - Bairro)
             </h3>
             <div className="overflow-x-auto">
               <table className="w-full text-sm text-white">
                 <thead className="border-b border-white/10">
                   <tr>
-                    <th className="text-left py-3 px-4">Localidade</th>
+                    <th className="text-left py-3 px-4">Localidade Completa</th>
                     <th className="text-center py-3 px-4">Total de Votos</th>
                     <th className="text-left py-3 px-4">Líder</th>
                   </tr>
@@ -381,7 +444,7 @@ export default function Results() {
                 <tbody>
                   {chartData.byLocation.map((item: any, idx: number) => (
                     <tr key={idx} className="border-b border-white/5 hover:bg-white/5">
-                      <td className="py-3 px-4">{item.location}</td>
+                      <td className="py-3 px-4 text-xs md:text-sm">{item.location}</td>
                       <td className="text-center py-3 px-4 font-semibold">{item.count}</td>
                       <td className="py-3 px-4 text-green-300">{getLeaderByLocation(item.location)}</td>
                     </tr>

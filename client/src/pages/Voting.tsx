@@ -3,7 +3,8 @@ import { useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import Layout from "@/components/Layout";
-import { ArrowLeft, LogOut, CheckCircle2 } from "lucide-react";
+import { ArrowLeft, LogOut, CheckCircle2, Loader } from "lucide-react";
+import { trpc } from "@/lib/trpc";
 
 // Dados dos Candidatos
 const CANDIDATES = [
@@ -51,8 +52,10 @@ const playBallotSound = () => {
 export default function Voting() {
   const [, setLocation] = useLocation();
   const { toast } = useToast();
+  const castVoteMutation = trpc.votes.cast.useMutation();
   const [selectedCandidate, setSelectedCandidate] = useState<number | null>(null);
   const [voter, setVoter] = useState<any>(null);
+  const [isVoting, setIsVoting] = useState(false);
 
   useEffect(() => {
     const storedVoter = localStorage.getItem("currentVoter");
@@ -68,33 +71,49 @@ export default function Voting() {
     }
   }, [setLocation, toast]);
 
-  const handleVote = () => {
-    if (!selectedCandidate) return;
+  const handleVote = async () => {
+    if (!selectedCandidate || !voter) return;
 
-    const candidate = CANDIDATES.find(c => c.id === selectedCandidate);
-    
-    // Salvar voto (simulação)
-    const votes = JSON.parse(localStorage.getItem("votes") || "[]");
-    votes.push({
-      candidateId: selectedCandidate,
-      candidateName: candidate?.name,
-      voterRegion: voter.region,
-      timestamp: new Date().toISOString()
-    });
-    localStorage.setItem("votes", JSON.stringify(votes));
+    setIsVoting(true);
 
-    // 🔊 Tocar som de urna
-    playBallotSound();
+    try {
+      const candidate = CANDIDATES.find(c => c.id === selectedCandidate);
+      
+      // Preparar dados do voto para o banco de dados
+      const voteData = {
+        voterId: 0, // Será preenchido pelo servidor se necessário
+        candidateId: selectedCandidate,
+        candidateNumber: candidate?.number || selectedCandidate,
+        state: voter.estadoSigla,
+        municipality: voter.municipio,
+        neighborhood: voter.bairro
+      };
 
-    toast({
-      title: "Voto Computado com Sucesso!",
-      description: `Você votou em ${candidate?.name}. Obrigado!`,
-      className: "bg-green-600 text-white border-none"
-    });
+      // Registrar voto no banco de dados
+      await castVoteMutation.mutateAsync(voteData);
 
-    // Limpar sessão atual
-    localStorage.removeItem("currentVoter");
-    setTimeout(() => setLocation("/"), 2000);
+      // 🔊 Tocar som de urna
+      playBallotSound();
+
+      toast({
+        title: "Voto Computado com Sucesso!",
+        description: `Você votou em ${candidate?.name}. Obrigado!`,
+        className: "bg-green-600 text-white border-none"
+      });
+
+      // Limpar sessão atual
+      localStorage.removeItem("currentVoter");
+      setTimeout(() => setLocation("/"), 2000);
+    } catch (error: any) {
+      console.error("Erro ao votar:", error);
+      toast({
+        title: "Erro ao votar",
+        description: error.message || "Não foi possível registrar seu voto. Tente novamente.",
+        variant: "destructive"
+      });
+    } finally {
+      setIsVoting(false);
+    }
   };
 
   // Funções Administrativas (Simuladas aqui para o protótipo, mas deveriam estar no admin)
@@ -136,7 +155,7 @@ export default function Voting() {
           </Button>
           <div className="text-center hidden md:block">
             <h2 className="text-2xl font-bold text-white">Cédula Eleitoral Digital</h2>
-            <p className="text-sm text-gray-300">Eleitor: {voter?.name} ({voter?.region})</p>
+            <p className="text-sm text-gray-300">Eleitor: {voter?.name} ({voter?.municipio})</p>
           </div>
           <Button variant="destructive" onClick={() => setLocation("/")} className="gap-2 bg-red-500/80 hover:bg-red-600">
             <LogOut className="w-4 h-4" /> Sair
@@ -146,7 +165,7 @@ export default function Voting() {
         {/* Mobile Header Info */}
         <div className="md:hidden text-center mb-6">
           <h2 className="text-xl font-bold text-white">Cédula Digital</h2>
-          <p className="text-xs text-gray-300">{voter?.name} - {voter?.region}</p>
+          <p className="text-xs text-gray-300">{voter?.name} - {voter?.municipio}</p>
         </div>
 
         {/* Grid de Candidatos */}
@@ -154,12 +173,12 @@ export default function Voting() {
           {CANDIDATES.map((candidate) => (
             <div 
               key={candidate.id}
-              onClick={() => setSelectedCandidate(candidate.id)}
+              onClick={() => !isVoting && setSelectedCandidate(candidate.id)}
               className={`relative group cursor-pointer rounded-xl overflow-hidden transition-all duration-300 ${
                 selectedCandidate === candidate.id 
                   ? 'ring-4 ring-green-500 scale-105 shadow-[0_0_20px_rgba(0,255,0,0.3)]' 
                   : 'hover:scale-105 hover:shadow-lg opacity-80 hover:opacity-100'
-              }`}
+              } ${isVoting ? 'opacity-50 cursor-not-allowed' : ''}`}
             >
               <div className="aspect-square bg-gray-800 relative">
                 <img 
@@ -186,26 +205,48 @@ export default function Voting() {
         <div className="flex justify-center mb-8">
           <Button 
             onClick={handleVote}
-            disabled={!selectedCandidate}
-            className={`w-full md:w-1/2 h-16 text-xl font-bold transition-all ${
-              selectedCandidate 
+            disabled={!selectedCandidate || isVoting || castVoteMutation.isPending}
+            className={`w-full md:w-1/2 h-16 text-xl font-bold transition-all gap-2 ${
+              selectedCandidate && !isVoting
                 ? 'bg-gradient-to-r from-green-600 to-green-500 hover:from-green-500 hover:to-green-400 shadow-[0_0_30px_rgba(0,255,0,0.4)] animate-pulse' 
                 : 'bg-gray-600 cursor-not-allowed opacity-50'
             }`}
           >
-            {selectedCandidate ? 'CONFIRMAR VOTO' : 'SELECIONE UM CANDIDATO'}
+            {isVoting || castVoteMutation.isPending ? (
+              <>
+                <Loader className="w-5 h-5 animate-spin" />
+                PROCESSANDO...
+              </>
+            ) : (
+              selectedCandidate ? 'CONFIRMAR VOTO' : 'SELECIONE UM CANDIDATO'
+            )}
           </Button>
         </div>
 
         {/* Botões de Controle (Requisitados na Tela 2) */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-3 border-t border-white/10 pt-6">
-          <Button variant="outline" onClick={handlePartialResult} className="bg-blue-500/10 border-blue-500/30 text-blue-200 hover:bg-blue-500/20">
+          <Button 
+            variant="outline" 
+            onClick={handlePartialResult}
+            disabled={isVoting}
+            className="bg-blue-500/10 border-blue-500/30 text-blue-200 hover:bg-blue-500/20 disabled:opacity-50"
+          >
             I - Ver Resultado Parcial
           </Button>
-          <Button variant="outline" onClick={handlePersistSimulation} className="bg-yellow-500/10 border-yellow-500/30 text-yellow-200 hover:bg-yellow-500/20">
+          <Button 
+            variant="outline" 
+            onClick={handlePersistSimulation}
+            disabled={isVoting}
+            className="bg-yellow-500/10 border-yellow-500/30 text-yellow-200 hover:bg-yellow-500/20 disabled:opacity-50"
+          >
             II - Persistir Simulação
           </Button>
-          <Button variant="outline" onClick={handleClearAll} className="bg-red-500/10 border-red-500/30 text-red-200 hover:bg-red-500/20">
+          <Button 
+            variant="outline" 
+            onClick={handleClearAll}
+            disabled={isVoting}
+            className="bg-red-500/10 border-red-500/30 text-red-200 hover:bg-red-500/20 disabled:opacity-50"
+          >
             III - Limpar Tudo
           </Button>
         </div>

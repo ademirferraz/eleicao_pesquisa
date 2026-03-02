@@ -5,7 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import Layout from "@/components/Layout";
-import { ArrowLeft, Lock, Settings, Save, Loader } from "lucide-react";
+import { ArrowLeft, Lock, Settings, Save, Loader, Plus, Trash2, Users } from "lucide-react";
 import { trpc } from "@/lib/trpc";
 
 // List of 27 Brazilian states
@@ -45,12 +45,20 @@ export default function Admin() {
   const [adminPassword, setAdminPassword] = useState("");
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [showPasswordForm, setShowPasswordForm] = useState(true);
+  const [activeTab, setActiveTab] = useState<"config" | "candidates">("config");
   
   const [formData, setFormData] = useState({
     estado: "",
     municipio: "",
     electionName: "",
     electionYear: new Date().getFullYear(),
+  });
+  
+  const [candidateForm, setCandidateForm] = useState({
+    number: "",
+    name: "",
+    party: "",
+    position: "",
   });
   
   const [municipios, setMunicipios] = useState<any[]>([]);
@@ -60,6 +68,11 @@ export default function Admin() {
   // Load current election config
   const { data: currentConfig } = trpc.admin.getElectionConfig.useQuery();
   const saveMutation = trpc.admin.saveElectionConfig.useMutation();
+  
+  // Candidate mutations
+  const { data: candidates, refetch: refetchCandidates } = trpc.candidates.list.useQuery();
+  const createCandidateMutation = trpc.candidates.create.useMutation();
+  const deleteCandidateMutation = trpc.candidates.delete.useMutation();
   
   // Load municipalities when state changes
   useEffect(() => {
@@ -169,6 +182,66 @@ export default function Admin() {
     }
   };
 
+  const handleAddCandidate = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    if (!candidateForm.number || !candidateForm.name) {
+      toast({
+        title: "Campos obrigatórios",
+        description: "Número e nome do candidato são obrigatórios.",
+        variant: "destructive"
+      });
+      return;
+    }
+    
+    try {
+      await createCandidateMutation.mutateAsync({
+        number: parseInt(candidateForm.number),
+        name: candidateForm.name,
+        party: candidateForm.party || undefined,
+        position: candidateForm.position || undefined,
+      });
+      
+      setCandidateForm({ number: "", name: "", party: "", position: "" });
+      refetchCandidates();
+      
+      toast({
+        title: "✅ Candidato Adicionado",
+        description: `${candidateForm.name} foi adicionado com sucesso!`,
+        className: "bg-green-600 text-white border-none"
+      });
+    } catch (error: any) {
+      console.error("Erro ao adicionar candidato:", error);
+      toast({
+        title: "Erro",
+        description: error.message || "Não foi possível adicionar o candidato.",
+        variant: "destructive"
+      });
+    }
+  };
+
+  const handleDeleteCandidate = async (id: number) => {
+    if (!confirm("Tem certeza que deseja remover este candidato?")) return;
+    
+    try {
+      await deleteCandidateMutation.mutateAsync({ id });
+      refetchCandidates();
+      
+      toast({
+        title: "✅ Candidato Removido",
+        description: "Candidato foi removido com sucesso!",
+        className: "bg-green-600 text-white border-none"
+      });
+    } catch (error: any) {
+      console.error("Erro ao remover candidato:", error);
+      toast({
+        title: "Erro",
+        description: error.message || "Não foi possível remover o candidato.",
+        variant: "destructive"
+      });
+    }
+  };
+
   if (showPasswordForm) {
     return (
       <Layout>
@@ -206,7 +279,7 @@ export default function Admin() {
 
   return (
     <Layout>
-      <div className="glass-panel rounded-3xl p-6 md:p-10 w-full max-w-2xl mx-auto animate-in slide-in-from-right duration-500">
+      <div className="glass-panel rounded-3xl p-6 md:p-10 w-full max-w-4xl mx-auto animate-in slide-in-from-right duration-500">
         
         {/* Header */}
         <div className="flex justify-between items-center mb-8">
@@ -215,97 +288,253 @@ export default function Admin() {
           </Button>
           <div className="flex items-center gap-2">
             <Settings className="w-6 h-6 text-blue-400" />
-            <h2 className="text-3xl font-bold text-white">Configuração de Eleição</h2>
+            <h2 className="text-3xl font-bold text-white">Painel de Admin</h2>
           </div>
         </div>
 
-        <form onSubmit={handleSaveConfig} className="space-y-6">
-          
-          {/* Estado */}
-          <div className="space-y-2">
-            <Label htmlFor="estado" className="text-gray-200">Estado *</Label>
-            <select
-              id="estado"
-              value={formData.estado}
-              onChange={(e) => setFormData(prev => ({ ...prev, estado: e.target.value }))}
-              className="w-full px-4 py-2 rounded-lg bg-white/10 border border-white/20 text-white placeholder:text-gray-400 focus:outline-none focus:border-white/40"
-              required
-            >
-              <option value="">Selecione um estado</option>
-              {ESTADOS_BRASIL.map(estado => (
-                <option key={estado.id} value={estado.id}>
-                  {estado.nome} ({estado.sigla})
-                </option>
-              ))}
-            </select>
-          </div>
-
-          {/* Município */}
-          <div className="space-y-2">
-            <Label htmlFor="municipio" className="text-gray-200">Município * (Digite o nome)</Label>
-            <Input 
-              id="municipio" 
-              value={formData.municipio}
-              onChange={(e) => setFormData(prev => ({ ...prev, municipio: e.target.value }))}
-              placeholder="Digite o nome do município"
-              className="bg-white/10 border-white/20 text-white placeholder:text-gray-400"
-              required
-            />
-          </div>
-
-          {/* Election Name */}
-          <div className="space-y-2">
-            <Label htmlFor="electionName" className="text-gray-200">Nome da Eleição (Opcional)</Label>
-            <Input 
-              id="electionName" 
-              value={formData.electionName}
-              onChange={(e) => setFormData(prev => ({ ...prev, electionName: e.target.value }))}
-              placeholder="Ex: Eleição Municipal 2024"
-              className="bg-white/10 border-white/20 text-white placeholder:text-gray-400"
-            />
-          </div>
-
-          {/* Election Year */}
-          <div className="space-y-2">
-            <Label htmlFor="electionYear" className="text-gray-200">Ano da Eleição *</Label>
-            <Input 
-              id="electionYear" 
-              type="number"
-              value={formData.electionYear}
-              onChange={(e) => setFormData(prev => ({ ...prev, electionYear: parseInt(e.target.value) }))}
-              className="bg-white/10 border-white/20 text-white placeholder:text-gray-400"
-              required
-            />
-          </div>
-
-          {/* Current Config Display */}
-          {currentConfig && (
-            <div className="bg-green-900/30 border border-green-500/30 rounded-lg p-4">
-              <p className="text-green-300 text-sm">
-                <strong>Configuração Atual:</strong> {currentConfig.municipality}, {currentConfig.state} ({currentConfig.electionYear})
-              </p>
-            </div>
-          )}
-
-          {/* Save Button */}
-          <Button 
-            type="submit" 
-            disabled={isSaving || saveMutation.isPending}
-            className="w-full bg-gradient-to-r from-green-500 to-blue-600 hover:from-green-600 hover:to-blue-700 text-white font-bold py-3 rounded-lg gap-2"
+        {/* Tabs */}
+        <div className="flex gap-4 mb-8 border-b border-white/10">
+          <button
+            onClick={() => setActiveTab("config")}
+            className={`pb-3 px-4 font-semibold transition ${
+              activeTab === "config"
+                ? "text-blue-400 border-b-2 border-blue-400"
+                : "text-gray-400 hover:text-white"
+            }`}
           >
-            {saveMutation.isPending ? (
-              <>
-                <Loader className="w-4 h-4 animate-spin" />
-                Salvando...
-              </>
-            ) : (
-              <>
-                <Save className="w-4 h-4" />
-                Salvar Configuração
-              </>
+            <Settings className="w-4 h-4 inline mr-2" />
+            Configuração
+          </button>
+          <button
+            onClick={() => setActiveTab("candidates")}
+            className={`pb-3 px-4 font-semibold transition ${
+              activeTab === "candidates"
+                ? "text-blue-400 border-b-2 border-blue-400"
+                : "text-gray-400 hover:text-white"
+            }`}
+          >
+            <Users className="w-4 h-4 inline mr-2" />
+            Candidatos
+          </button>
+        </div>
+
+        {/* Config Tab */}
+        {activeTab === "config" && (
+          <form onSubmit={handleSaveConfig} className="space-y-6">
+            
+            {/* Estado */}
+            <div className="space-y-2">
+              <Label htmlFor="estado" className="text-gray-200">Estado *</Label>
+              <select
+                id="estado"
+                value={formData.estado}
+                onChange={(e) => setFormData(prev => ({ ...prev, estado: e.target.value }))}
+                className="w-full px-4 py-2 rounded-lg bg-white/10 border border-white/20 text-white placeholder:text-gray-400 focus:outline-none focus:border-white/40"
+                required
+              >
+                <option value="">Selecione um estado</option>
+                {ESTADOS_BRASIL.map(estado => (
+                  <option key={estado.id} value={estado.id}>
+                    {estado.nome} ({estado.sigla})
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            {/* Município */}
+            <div className="space-y-2">
+              <Label htmlFor="municipio" className="text-gray-200">Município * (Digite o nome)</Label>
+              <Input 
+                id="municipio" 
+                value={formData.municipio}
+                onChange={(e) => setFormData(prev => ({ ...prev, municipio: e.target.value }))}
+                placeholder="Digite o nome do município"
+                className="bg-white/10 border-white/20 text-white placeholder:text-gray-400"
+                required
+              />
+            </div>
+
+            {/* Election Name */}
+            <div className="space-y-2">
+              <Label htmlFor="electionName" className="text-gray-200">Nome da Eleição (Opcional)</Label>
+              <Input 
+                id="electionName" 
+                value={formData.electionName}
+                onChange={(e) => setFormData(prev => ({ ...prev, electionName: e.target.value }))}
+                placeholder="Ex: Eleição Municipal 2024"
+                className="bg-white/10 border-white/20 text-white placeholder:text-gray-400"
+              />
+            </div>
+
+            {/* Election Year */}
+            <div className="space-y-2">
+              <Label htmlFor="electionYear" className="text-gray-200">Ano da Eleição *</Label>
+              <Input 
+                id="electionYear" 
+                type="number"
+                value={formData.electionYear}
+                onChange={(e) => setFormData(prev => ({ ...prev, electionYear: parseInt(e.target.value) }))}
+                className="bg-white/10 border-white/20 text-white placeholder:text-gray-400"
+                required
+              />
+            </div>
+
+            {/* Current Config Display */}
+            {currentConfig && (
+              <div className="bg-green-900/30 border border-green-500/30 rounded-lg p-4">
+                <p className="text-green-300 text-sm">
+                  <strong>Configuração Atual:</strong> {currentConfig.municipality}, {currentConfig.state} ({currentConfig.electionYear})
+                </p>
+              </div>
             )}
-          </Button>
-        </form>
+
+            {/* Save Button */}
+            <Button 
+              type="submit" 
+              disabled={isSaving || saveMutation.isPending}
+              className="w-full bg-gradient-to-r from-green-500 to-blue-600 hover:from-green-600 hover:to-blue-700 text-white font-bold py-3 rounded-lg gap-2"
+            >
+              {saveMutation.isPending ? (
+                <>
+                  <Loader className="w-4 h-4 animate-spin" />
+                  Salvando...
+                </>
+              ) : (
+                <>
+                  <Save className="w-4 h-4" />
+                  Salvar Configuração
+                </>
+              )}
+            </Button>
+          </form>
+        )}
+
+        {/* Candidates Tab */}
+        {activeTab === "candidates" && (
+          <div className="space-y-8">
+            
+            {/* Add Candidate Form */}
+            <div className="bg-white/5 p-6 rounded-xl border border-white/10">
+              <h3 className="text-white font-semibold mb-4 flex items-center gap-2">
+                <Plus className="w-5 h-5 text-green-400" />
+                Adicionar Novo Candidato
+              </h3>
+              
+              <form onSubmit={handleAddCandidate} className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="number" className="text-gray-200">Número *</Label>
+                  <Input 
+                    id="number" 
+                    type="number"
+                    value={candidateForm.number}
+                    onChange={(e) => setCandidateForm(prev => ({ ...prev, number: e.target.value }))}
+                    placeholder="Ex: 10, 20, 11"
+                    className="bg-white/10 border-white/20 text-white placeholder:text-gray-400"
+                    required
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="name" className="text-gray-200">Nome do Candidato *</Label>
+                  <Input 
+                    id="name" 
+                    value={candidateForm.name}
+                    onChange={(e) => setCandidateForm(prev => ({ ...prev, name: e.target.value }))}
+                    placeholder="Nome completo"
+                    className="bg-white/10 border-white/20 text-white placeholder:text-gray-400"
+                    required
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="party" className="text-gray-200">Partido (Opcional)</Label>
+                  <Input 
+                    id="party" 
+                    value={candidateForm.party}
+                    onChange={(e) => setCandidateForm(prev => ({ ...prev, party: e.target.value }))}
+                    placeholder="Ex: PT, PSDB, PSD"
+                    className="bg-white/10 border-white/20 text-white placeholder:text-gray-400"
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="position" className="text-gray-200">Cargo (Opcional)</Label>
+                  <Input 
+                    id="position" 
+                    value={candidateForm.position}
+                    onChange={(e) => setCandidateForm(prev => ({ ...prev, position: e.target.value }))}
+                    placeholder="Ex: Vereador, Prefeito"
+                    className="bg-white/10 border-white/20 text-white placeholder:text-gray-400"
+                  />
+                </div>
+
+                <Button 
+                  type="submit"
+                  disabled={createCandidateMutation.isPending}
+                  className="md:col-span-2 bg-gradient-to-r from-green-500 to-blue-600 hover:from-green-600 hover:to-blue-700 text-white font-bold py-2 rounded-lg gap-2"
+                >
+                  {createCandidateMutation.isPending ? (
+                    <>
+                      <Loader className="w-4 h-4 animate-spin" />
+                      Adicionando...
+                    </>
+                  ) : (
+                    <>
+                      <Plus className="w-4 h-4" />
+                      Adicionar Candidato
+                    </>
+                  )}
+                </Button>
+              </form>
+            </div>
+
+            {/* Candidates List */}
+            <div className="bg-white/5 p-6 rounded-xl border border-white/10">
+              <h3 className="text-white font-semibold mb-4 flex items-center gap-2">
+                <Users className="w-5 h-5 text-blue-400" />
+                Candidatos Cadastrados ({candidates?.length || 0})
+              </h3>
+              
+              {candidates && candidates.length > 0 ? (
+                <div className="overflow-x-auto">
+                  <table className="w-full text-sm text-white">
+                    <thead className="border-b border-white/10">
+                      <tr>
+                        <th className="text-left py-3 px-4">Número</th>
+                        <th className="text-left py-3 px-4">Nome</th>
+                        <th className="text-left py-3 px-4">Partido</th>
+                        <th className="text-left py-3 px-4">Cargo</th>
+                        <th className="text-center py-3 px-4">Ação</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {candidates.map((candidate: any) => (
+                        <tr key={candidate.id} className="border-b border-white/5 hover:bg-white/5">
+                          <td className="py-3 px-4 font-semibold">{candidate.number}</td>
+                          <td className="py-3 px-4">{candidate.name}</td>
+                          <td className="py-3 px-4">{candidate.party || "-"}</td>
+                          <td className="py-3 px-4">{candidate.position || "-"}</td>
+                          <td className="py-3 px-4 text-center">
+                            <Button
+                              onClick={() => handleDeleteCandidate(candidate.id)}
+                              disabled={deleteCandidateMutation.isPending}
+                              className="bg-red-600 hover:bg-red-700 text-white gap-2 py-1 px-3 text-sm"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                              Remover
+                            </Button>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              ) : (
+                <p className="text-gray-400 text-center py-8">Nenhum candidato cadastrado ainda.</p>
+              )}
+            </div>
+          </div>
+        )}
       </div>
     </Layout>
   );

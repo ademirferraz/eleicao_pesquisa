@@ -1,0 +1,9 @@
+{
+  "query": "INSERT INTO electionConfig (state, municipality, electionYear) VALUES ('PE', 'Recife', 2026);",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway03.us-east-1.prod.aws.tidbcloud.com --port 4000 --user E3wbwcXnhF544Up.9cf9f83e170f --database 7hzq3XkWSriVjWEYArVVdE --execute INSERT INTO electionConfig (state, municipality, electionYear) VALUES ('PE', 'Recife', 2026);",
+  "rows": [],
+  "messages": [],
+  "stdout": "",
+  "stderr": "",
+  "execution_time_ms": 386
+}

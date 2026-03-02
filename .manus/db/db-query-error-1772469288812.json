@@ -1,0 +1,8 @@
+{
+  "query": "INSERT INTO electionConfig (state, municipality, created_at, updated_at) VALUES ('PE', 'Recife', NOW(), NOW());",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway03.us-east-1.prod.aws.tidbcloud.com --port 4000 --user E3wbwcXnhF544Up.9cf9f83e170f --database 7hzq3XkWSriVjWEYArVVdE --execute INSERT INTO electionConfig (state, municipality, created_at, updated_at) VALUES ('PE', 'Recife', NOW(), NOW());",
+  "returncode": 1,
+  "logs": [
+    "ERROR 1054 (42S22) at line 1: Unknown column 'created_at' in 'field list'"
+  ]
+}

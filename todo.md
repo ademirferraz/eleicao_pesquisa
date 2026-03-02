@@ -60,3 +60,12 @@
 - [x] Criar hook React para receber atualizações em tempo real - COMPLETO
 - [x] Integrar atualização em tempo real na página Results.tsx - COMPLETO
 - [x] Testar sincronização entre múltiplos navegadores - TESTES PASSANDO
+
+
+## Correções Críticas - Performance e UX
+
+- [x] Corrigir carregamento infinito - CORRIGIDO: tema dark aplicado
+- [x] Responsividade mobile: banner/hero não deve ocupar tela inteira - CORRIGIDO
+- [x] Aumentar tamanho dos botões para mobile - CORRIGIDO: h-16 no mobile
+- [x] Melhorar headline e branding para posicionamento comercial - CORRIGIDO
+- [x] Remover configurações de 100vh que empurram conteúdo para baixo - CORRIGIDO

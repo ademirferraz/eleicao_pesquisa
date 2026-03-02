@@ -24,15 +24,15 @@ export default function Welcome() {
         </div>
 
         {/* Títulos */}
-        <h1 className="text-4xl md:text-5xl font-bold mb-4 text-white text-shadow tracking-tight">
-          Bem-vindo à <br/>
+        <h1 className="text-3xl md:text-5xl font-bold mb-4 text-white text-shadow tracking-tight">
+          Aproxime-se dos seus <br/>
           <span className="text-transparent bg-clip-text bg-gradient-to-r from-green-400 via-yellow-400 to-blue-400">
-            Consulta Eleitoral
+            Apoiadores
           </span>
         </h1>
         
         <p className="text-lg text-gray-200 mb-2 font-light">
-          Sistema de votação seguro e prático
+          Acompanhe sua força política por bairro e município
         </p>
         
         <div className="flex items-center justify-center gap-2 text-sm text-gray-400 mb-10">
@@ -41,21 +41,21 @@ export default function Welcome() {
         </div>
 
         {/* Ações */}
-        <div className="flex flex-col gap-4 items-center w-full max-w-xs mx-auto">
+        <div className="flex flex-col gap-3 md:gap-4 items-center w-full max-w-sm mx-auto mt-8">
           <Link href="/cadastro" className="w-full">
-            <Button className="w-full h-14 text-lg font-bold bg-gradient-to-r from-green-600 to-blue-600 hover:from-green-500 hover:to-blue-500 border-0 shadow-lg shadow-blue-900/50 transition-all hover:scale-105">
+            <Button className="w-full h-16 md:h-14 text-base md:text-lg font-bold bg-gradient-to-r from-green-600 to-blue-600 hover:from-green-500 hover:to-blue-500 border-0 shadow-lg shadow-blue-900/50 transition-all hover:scale-105 rounded-xl">
               Cadastre-se
             </Button>
           </Link>
           
           <Link href="/resultados" className="w-full">
-            <Button variant="outline" className="w-full h-12 text-base font-semibold bg-white/10 border-white/30 text-white hover:bg-white/20 gap-2">
-              <BarChart3 className="w-4 h-4" /> Ver Resultados
+            <Button variant="outline" className="w-full h-14 md:h-12 text-base font-semibold bg-white/10 border-white/30 text-white hover:bg-white/20 gap-2 rounded-xl">
+              <BarChart3 className="w-5 h-5" /> Ver Resultados
             </Button>
           </Link>
           
           <Link href="/admin-login" className="w-full">
-            <Button variant="ghost" className="w-full text-gray-300 hover:text-white hover:bg-white/10">
+            <Button variant="ghost" className="w-full h-12 text-base text-gray-300 hover:text-white hover:bg-white/10 rounded-xl">
               Administrador →
             </Button>
           </Link>

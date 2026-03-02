@@ -8,7 +8,7 @@ import Layout from "@/components/Layout";
 import { ArrowLeft, LogOut, Loader } from "lucide-react";
 import { trpc } from "@/lib/trpc";
 
-// Funções de formatação de input
+// Funções de formatação
 const formatCPF = (value: string): string => {
   const cleaned = value.replace(/\D/g, "");
   if (cleaned.length <= 3) return cleaned;
@@ -25,7 +25,7 @@ const formatDate = (value: string): string => {
 };
 
 // Import localidades dataset
-import localidades from "@/../../server/localidades.json";
+const localidades = require("@/../../server/localidades.json");
 
 export default function Register() {
   const [, setLocation] = useLocation();
@@ -36,7 +36,7 @@ export default function Register() {
     name: "",
     cpf: "",
     birthDate: "",
-    bairro: ""
+    neighborhood: ""
   });
 
   const [bairros, setBairros] = useState<string[]>([]);
@@ -44,41 +44,32 @@ export default function Register() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   
   // Load election config and neighborhoods
-  const { data: config } = trpc.admin.getElectionConfig.useQuery();
+  const { data: config, isLoading } = trpc.admin.getElectionConfig.useQuery();
   
   useEffect(() => {
     if (config) {
       setElectionConfig(config);
       
       // Load neighborhoods from localidades dataset
-      const loc = localidades as any;
-      if (loc[config.state] && loc[config.state].municipios[config.municipality]) {
-        const municipioData = loc[config.state].municipios[config.municipality];
-        const allNeighborhoods = [
-          ...municipioData.bairros,
-          ...municipioData.distritos
-        ].sort();
-        setBairros(allNeighborhoods);
-      } else {
-        // Fallback if not found in dataset
-        setBairros(["Centro", "Zona Rural", "Distritos", "Outros"]);
+      try {
+        const loc = localidades as any;
+        if (loc[config.state] && loc[config.state].municipios[config.municipality]) {
+          const municipioData = loc[config.state].municipios[config.municipality];
+          const allNeighborhoods = [
+            ...municipioData.bairros,
+            ...municipioData.distritos
+          ].sort();
+          setBairros(allNeighborhoods);
+        } else {
+          // Fallback if not found
+          setBairros(["Centro", "Zona Rural", "Outros"]);
+        }
+      } catch (error) {
+        console.error("Erro ao carregar bairros:", error);
+        setBairros(["Centro", "Zona Rural", "Outros"]);
       }
     }
   }, [config]);
-
-  const handleNameChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setFormData(prev => ({ ...prev, name: e.target.value }));
-  };
-
-  const handleCPFChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const formatted = formatCPF(e.target.value);
-    setFormData(prev => ({ ...prev, cpf: formatted }));
-  };
-
-  const handleDateChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const formatted = formatDate(e.target.value);
-    setFormData(prev => ({ ...prev, birthDate: formatted }));
-  };
 
   const validateAge = (dateString: string) => {
     const parts = dateString.split('/');
@@ -106,7 +97,7 @@ export default function Register() {
     e.preventDefault();
     
     // Validação básica
-    if (!formData.name || !formData.cpf || !formData.birthDate || !formData.bairro) {
+    if (!formData.name || !formData.cpf || !formData.birthDate || !formData.neighborhood) {
       toast({
         title: "Campos obrigatórios",
         description: "Por favor, preencha todos os campos.",
@@ -165,7 +156,7 @@ export default function Register() {
         birthDate: formData.birthDate,
         state: electionConfig.state,
         municipality: electionConfig.municipality,
-        neighborhood: formData.bairro
+        neighborhood: formData.neighborhood
       };
 
       // Registrar eleitor no banco de dados
@@ -178,7 +169,7 @@ export default function Register() {
         birthDate: formData.birthDate,
         estado: electionConfig.state,
         municipio: electionConfig.municipality,
-        bairro: formData.bairro,
+        bairro: formData.neighborhood,
         age
       };
       localStorage.setItem("currentVoter", JSON.stringify(voterDisplay));
@@ -202,13 +193,26 @@ export default function Register() {
     }
   };
 
-  if (!electionConfig) {
+  if (isLoading) {
     return (
       <Layout>
         <div className="glass-panel rounded-3xl p-6 md:p-10 w-full max-w-md mx-auto animate-in slide-in-from-right duration-500">
           <div className="text-center">
             <Loader className="w-8 h-8 animate-spin text-blue-400 mx-auto mb-4" />
-            <p className="text-white">Carregando configuração de eleição...</p>
+            <p className="text-white">Carregando...</p>
+          </div>
+        </div>
+      </Layout>
+    );
+  }
+
+  if (!electionConfig) {
+    return (
+      <Layout>
+        <div className="glass-panel rounded-3xl p-6 md:p-10 w-full max-w-md mx-auto animate-in slide-in-from-right duration-500">
+          <div className="text-center">
+            <p className="text-red-400 mb-4">⚠️ Eleição não configurada</p>
+            <p className="text-gray-300 text-sm">O administrador precisa configurar o estado e município antes de iniciar os cadastros.</p>
           </div>
         </div>
       </Layout>
@@ -217,7 +221,7 @@ export default function Register() {
 
   return (
     <Layout>
-      <div className="glass-panel rounded-3xl p-6 md:p-10 w-full max-w-3xl mx-auto animate-in slide-in-from-right duration-500">
+      <div className="glass-panel rounded-3xl p-6 md:p-10 w-full max-w-2xl mx-auto animate-in slide-in-from-right duration-500">
         
         {/* Header */}
         <div className="flex justify-between items-center mb-8">
@@ -225,7 +229,7 @@ export default function Register() {
             <ArrowLeft className="w-4 h-4" /> Voltar
           </Button>
           <Button variant="destructive" onClick={() => setLocation("/")} className="gap-2 bg-red-500/80 hover:bg-red-600">
-            <LogOut className="w-4 h-4" /> Sair do App
+            <LogOut className="w-4 h-4" /> Sair
           </Button>
         </div>
 
@@ -235,14 +239,14 @@ export default function Register() {
         </p>
 
         <form onSubmit={handleSubmit} className="space-y-6">
+          
           {/* Nome Completo */}
           <div className="space-y-2">
             <Label htmlFor="name" className="text-gray-200">Nome Completo *</Label>
             <Input 
               id="name" 
-              name="name"
               value={formData.name}
-              onChange={handleNameChange}
+              onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
               placeholder="Digite seu nome completo"
               className="bg-white/10 border-white/20 text-white placeholder:text-gray-400"
               required
@@ -254,9 +258,8 @@ export default function Register() {
             <Label htmlFor="cpf" className="text-gray-200">CPF *</Label>
             <Input 
               id="cpf" 
-              name="cpf"
               value={formData.cpf}
-              onChange={handleCPFChange}
+              onChange={(e) => setFormData(prev => ({ ...prev, cpf: formatCPF(e.target.value) }))}
               placeholder="000.000.000-00"
               maxLength={14}
               className="bg-white/10 border-white/20 text-white placeholder:text-gray-400"
@@ -269,9 +272,8 @@ export default function Register() {
             <Label htmlFor="birthDate" className="text-gray-200">Data de Nascimento *</Label>
             <Input 
               id="birthDate" 
-              name="birthDate"
               value={formData.birthDate}
-              onChange={handleDateChange}
+              onChange={(e) => setFormData(prev => ({ ...prev, birthDate: formatDate(e.target.value) }))}
               placeholder="DD/MM/AAAA"
               maxLength={10}
               className="bg-white/10 border-white/20 text-white placeholder:text-gray-400"
@@ -281,11 +283,11 @@ export default function Register() {
 
           {/* Bairro */}
           <div className="space-y-2">
-            <Label htmlFor="bairro" className="text-gray-200">Bairro/Região *</Label>
+            <Label htmlFor="neighborhood" className="text-gray-200">Bairro *</Label>
             <select
-              id="bairro"
-              value={formData.bairro}
-              onChange={(e) => setFormData(prev => ({ ...prev, bairro: e.target.value }))}
+              id="neighborhood"
+              value={formData.neighborhood}
+              onChange={(e) => setFormData(prev => ({ ...prev, neighborhood: e.target.value }))}
               className="w-full px-4 py-2 rounded-lg bg-white/10 border border-white/20 text-white placeholder:text-gray-400 focus:outline-none focus:border-white/40"
               required
             >
@@ -298,23 +300,21 @@ export default function Register() {
             </select>
           </div>
 
-          {/* Botões */}
-          <div className="flex gap-4 pt-6">
-            <Button 
-              type="submit" 
-              disabled={isSubmitting || registerMutation.isPending}
-              className="flex-1 bg-gradient-to-r from-green-500 to-blue-600 hover:from-green-600 hover:to-blue-700 text-white font-bold py-3 rounded-lg gap-2"
-            >
-              {registerMutation.isPending ? (
-                <>
-                  <Loader className="w-4 h-4 animate-spin" />
-                  Processando...
-                </>
-              ) : (
-                "Confirmar Cadastro"
-              )}
-            </Button>
-          </div>
+          {/* Submit Button */}
+          <Button 
+            type="submit" 
+            disabled={isSubmitting || registerMutation.isPending}
+            className="w-full bg-gradient-to-r from-green-500 to-blue-600 hover:from-green-600 hover:to-blue-700 text-white font-bold py-3 rounded-lg gap-2"
+          >
+            {registerMutation.isPending ? (
+              <>
+                <Loader className="w-4 h-4 animate-spin" />
+                Processando...
+              </>
+            ) : (
+              "Confirmar Cadastro"
+            )}
+          </Button>
         </form>
       </div>
     </Layout>

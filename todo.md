@@ -1,67 +1,54 @@
-# Consulta Eleitoral - TODO
+# Consulta Eleitoral - Correções Críticas
 
-## Phase 1: Backend & Database Setup
-- [x] Upgrade to web-db-user (database, server, auth)
-- [x] Create database schema for candidates, voters, votes
-- [x] Create database schema for admin settings
-- [x] Implement tRPC procedures for candidates CRUD
-- [x] Implement tRPC procedures for voter registration
-- [x] Implement tRPC procedures for voting
-- [x] Implement tRPC procedures for results/analytics
-- [x] Add admin authentication (password: 1234)
-
-## Phase 2: Admin Panel
-- [ ] Create AdminPanel page with candidate management
-- [ ] Add/Edit/Delete candidates (max 6)
-- [ ] Upload candidate photos
-- [ ] Generate test data
-- [ ] View real-time vote counts
-- [ ] Admin login with password
-
-## Phase 3: Voter Interface
-- [ ] Simplify Register.tsx (Nome, CPF, Data, Estado, Município, Bairro)
-- [ ] Create Welcome page with "Cadastre-se" button
-- [ ] Create Voting page with candidate photos (max 5)
-- [ ] Implement vote confirmation with sound
-- [ ] Add vote synchronization (real-time)
-
-## Phase 4: Results & Analytics
-- [ ] Create Results page with interactive charts
-- [ ] Show vote count by candidate
-- [ ] Show analysis by neighborhood
-- [ ] Show analysis by municipality
-- [ ] Real-time updates
-
-## Phase 5: Deployment & Sharing
-- [ ] Deploy to web with public link
-- [ ] Test vote synchronization across devices
-- [ ] Create shareable link for WhatsApp/Email/Instagram/Facebook
-- [ ] Verify votes persist across sessions
-- [ ] Test admin controls
-
-## Phase 6: Polish & Testing
-- [ ] Add candidate images (5 photos)
-- [ ] Test on mobile devices
-- [ ] Test on different browsers
-- [ ] Verify sound works everywhere
-- [ ] Performance optimization
-
-
-## Bug Fixes - Relatório de Correções Necessárias
+## Relatório de Correções Necessárias (9 Itens)
 
 ### Crítico - Download e Exibição
-- [x] Relatório: corrigir problema de download (não está sendo baixado) - CORRIGIDO: Suporta PNG e PDF
-- [x] Localidade do eleitor: exibir corretamente o município/bairro onde o eleitor mora - CORRIGIDO: Exibe Estado-Município-Bairro
+- [x] 1. Relatório: corrigir problema de download (não está sendo baixado) - CORRIGIDO
+- [x] 2. Localidade do eleitor: exibir corretamente o município/bairro onde o eleitor mora - CORRIGIDO
 
 ### Crítico - Gráficos e Filtros
-- [x] Gráfico de barras: aplicar cores distintas para cada barra - CORRIGIDO: 10 cores diferentes
-- [x] Botão "Limpar filtro": corrigir funcionalidade (atualmente não funciona) - CORRIGIDO: Funciona perfeitamente
-- [x] Filtro "Estado": garantir que todos os estados do Brasil apareçam na lista - CORRIGIDO: 27 estados
+- [x] 3. Gráfico de barras: aplicar cores distintas para cada barra - CORRIGIDO
+- [x] 4. Botão "Limpar filtro": corrigir funcionalidade (atualmente não funciona) - CORRIGIDO
+- [x] 5. Filtro "Estado": garantir que todos os estados do Brasil apareçam na lista - CORRIGIDO
 
 ### Crítico - Integração IBGE
-- [x] Gráfico de desempenho por município: incluir informação de bairro do eleitor via API IBGE - CORRIGIDO: API IBGE integrada
-- [x] Cadastro do eleitor: listar todos os bairros/regiões do município - CORRIGIDO: Carregamento dinâmico via IBGE
+- [x] 6. Gráfico de desempenho por município: incluir informação de bairro do eleitor via API IBGE - CORRIGIDO
+- [x] 7. Cadastro do eleitor: listar todos os bairros/regiões do município - CORRIGIDO
 
 ### Crítico - Validação
-- [x] Cadastro duplicado: impedir que o eleitor se cadastre mais de uma vez - CORRIGIDO: Verificação de CPF no banco
-- [x] Integração com filtros: assegurar que "Limpar filtros" funcione para evitar duplicidade - CORRIGIDO: Filtros funcionando
+- [x] 8. Cadastro duplicado: impedir que o eleitor se cadastre mais de uma vez - CORRIGIDO
+- [x] 9. Integração com filtros: assegurar que a correção do botão "Limpar filtros" funcione para evitar duplicidade de cadastros - CORRIGIDO
+
+## Progresso
+
+### Fase 1: Integração de API de Bairros
+- [x] Pesquisar opções de API para bairros
+- [x] Confirmar que IBGE API está funcionando
+- [x] Verificar fallback para bairros padrão
+
+### Fase 2: Correções de Download e Localidade
+- [ ] Verificar importação de jsPDF
+- [ ] Testar função de download PNG
+- [ ] Testar função de download PDF
+- [ ] Exibir localidade completa (Estado - Município - Bairro)
+
+### Fase 3: Gráficos e Cores
+- [ ] Aplicar 10 cores distintas ao gráfico de barras
+- [ ] Verificar renderização de cores no Chart.js
+
+### Fase 4: Filtros
+- [ ] Corrigir botão "Limpar Filtro"
+- [ ] Listar todos os 27 estados
+- [ ] Testar filtro por estado
+- [ ] Testar filtro por município
+
+### Fase 5: Prevenção de Duplicação
+- [ ] Verificar CPF duplicado no banco de dados
+- [ ] Impedir novo cadastro se CPF já existe
+- [ ] Testar fluxo de erro
+
+### Fase 6: Testes Finais
+- [ ] Testar fluxo completo de cadastro
+- [ ] Testar votação
+- [ ] Testar visualização de resultados
+- [ ] Criar checkpoint final

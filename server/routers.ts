@@ -5,6 +5,7 @@ import { publicProcedure, router } from "./_core/trpc";
 import { z } from "zod";
 import * as db from "./db";
 import { TRPCError } from "@trpc/server";
+import { broadcastVote } from "./websocket";
 
 // Validation schemas
 const candidateSchema = z.object({
@@ -138,6 +139,17 @@ export const appRouter = router({
         }
 
         await db.createVote(input);
+
+        // Broadcast vote to all connected clients
+        const candidate = await db.getCandidateById(input.candidateId);
+        broadcastVote({
+          candidateName: candidate?.name || `Candidato ${input.candidateNumber}`,
+          state: input.state,
+          municipality: input.municipality,
+          neighborhood: input.neighborhood,
+          timestamp: Date.now()
+        });
+
         return { success: true };
       }),
 

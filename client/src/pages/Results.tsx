@@ -8,6 +8,7 @@ import {
   PieChart as RePieChart, Pie, Cell, AreaChart, Area
 } from 'recharts';
 import { useToast } from "@/hooks/use-toast";
+import { useRealTimeVotes } from "@/hooks/useRealTimeVotes";
 import html2canvas from 'html2canvas';
 import jsPDF from 'jspdf';
 
@@ -49,6 +50,34 @@ export default function Results() {
     setFilteredVotes(storedVotes);
     processData(storedVotes);
   }, []);
+
+  // Handle real-time vote updates
+  const handleNewVote = (vote: any) => {
+    console.log("[Results] Novo voto recebido:", vote);
+    
+    const newVote = {
+      candidateName: vote.candidateName,
+      estadoNome: vote.state,
+      municipioNome: vote.municipality,
+      bairroNome: vote.neighborhood,
+      timestamp: vote.timestamp
+    };
+    
+    setVotes((prevVotes) => {
+      const updatedVotes = [...prevVotes, newVote];
+      localStorage.setItem("votes", JSON.stringify(updatedVotes));
+      return updatedVotes;
+    });
+    
+    toast({
+      title: "Novo voto registrado!",
+      description: `${vote.candidateName} - ${vote.municipality}, ${vote.state}`,
+      className: "bg-green-600 text-white border-none"
+    });
+  };
+
+  // Setup real-time updates
+  useRealTimeVotes(handleNewVote);
 
   // Atualizar municípios quando estado muda
   useEffect(() => {

@@ -52,3 +52,11 @@
 - [ ] Testar votação
 - [ ] Testar visualização de resultados
 - [ ] Criar checkpoint final
+
+
+## Atualizações em Tempo Real
+
+- [x] Implementar WebSocket no servidor para broadcast de votos - COMPLETO
+- [x] Criar hook React para receber atualizações em tempo real - COMPLETO
+- [x] Integrar atualização em tempo real na página Results.tsx - COMPLETO
+- [x] Testar sincronização entre múltiplos navegadores - TESTES PASSANDO

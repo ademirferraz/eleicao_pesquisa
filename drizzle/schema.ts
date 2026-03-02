@@ -95,3 +95,18 @@ export const adminSettings = mysqlTable("adminSettings", {
 
 export type AdminSettings = typeof adminSettings.$inferSelect;
 export type InsertAdminSettings = typeof adminSettings.$inferInsert;
+/**
+ * Election configuration - Admin sets state and municipality for voters
+ */
+export const electionConfig = mysqlTable("electionConfig", {
+  id: int("id").autoincrement().primaryKey(),
+  state: varchar("state", { length: 2 }).notNull(), // UF (e.g., SP, MG)
+  municipality: varchar("municipality", { length: 100 }).notNull(), // City name
+  electionName: varchar("electionName", { length: 255 }), // Optional election name
+  electionYear: int("electionYear").notNull(), // Year of election
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+export type ElectionConfig = typeof electionConfig.$inferSelect;
+export type InsertElectionConfig = typeof electionConfig.$inferInsert;

@@ -207,6 +207,21 @@ export const appRouter = router({
         return { success: true };
       }),
 
+    getElectionConfig: publicProcedure.query(async () => {
+      return await db.getElectionConfig();
+    }),
+
+    saveElectionConfig: publicProcedure
+      .input(z.object({
+        state: z.string().length(2),
+        municipality: z.string().min(1),
+        electionName: z.string().optional(),
+        electionYear: z.number().int(),
+      }))
+      .mutation(async ({ input }) => {
+        return await db.saveElectionConfig(input);
+      }),
+
     generateTestData: publicProcedure.mutation(async () => {
       // Create test candidates
       const testCandidates = [

@@ -7,6 +7,7 @@ import { ThemeProvider } from "./contexts/ThemeContext";
 import Welcome from "./pages/Welcome";
 import Register from "./pages/Register";
 import Voting from "./pages/Voting";
+import Admin from "./pages/Admin";
 import AdminLogin from "./pages/AdminLogin";
 import AdminPanel from "./pages/AdminPanel";
 import Results from "./pages/Results";
@@ -17,6 +18,7 @@ function Router() {
       <Route path="/" component={Welcome} />
       <Route path="/cadastro" component={Register} />
       <Route path="/votacao" component={Voting} />
+      <Route path="/admin" component={Admin} />
       <Route path="/admin-login" component={AdminLogin} />
       <Route path="/admin-panel" component={AdminPanel} />
       <Route path="/resultados" component={Results} />

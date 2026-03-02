@@ -1,6 +1,6 @@
 import { eq } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/mysql2";
-import { InsertUser, users, candidates, voters, votes, InsertCandidate, InsertVoter, InsertVote, adminSettings } from "../drizzle/schema";
+import { InsertUser, users, candidates, voters, votes, InsertCandidate, InsertVoter, InsertVote, adminSettings, electionConfig, InsertElectionConfig } from "../drizzle/schema";
 import { ENV } from './_core/env';
 
 let _db: ReturnType<typeof drizzle> | null = null;
@@ -199,4 +199,23 @@ export async function getAdminSettings() {
   if (!db) return null;
   const result = await db.select().from(adminSettings).limit(1);
   return result[0] || null;
+}
+
+// Election Config
+export async function getElectionConfig() {
+  const db = await getDb();
+  if (!db) return null;
+  const result = await db.select().from(electionConfig).limit(1);
+  return result[0] || null;
+}
+
+export async function saveElectionConfig(data: InsertElectionConfig) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  
+  // Delete existing config and insert new one
+  await db.delete(electionConfig);
+  await db.insert(electionConfig).values(data);
+  
+  return data;
 }

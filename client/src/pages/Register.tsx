@@ -5,8 +5,9 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import Layout from "@/components/Layout";
-import { ArrowLeft, LogOut, Loader } from "lucide-react";
+import { ArrowLeft, LogOut, Loader, CheckCircle2, AlertCircle } from "lucide-react";
 import { trpc } from "@/lib/trpc";
+import { isValidCPF, isValidDate, isValidVotingAge, calculateAge } from "@/utils/validation";
 
 // Funções de formatação de input
 const formatCPF = (value: string): string => {
@@ -37,6 +38,12 @@ export default function Register() {
     cpf: "",
     birthDate: "",
     bairro: ""
+  });
+
+  // Validation states
+  const [validation, setValidation] = useState({
+    cpf: { isValid: false, isTouched: false },
+    birthDate: { isValid: false, isTouched: false, age: -1 }
   });
 
   const [bairros, setBairros] = useState<string[]>([]);
@@ -73,33 +80,41 @@ export default function Register() {
   const handleCPFChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const formatted = formatCPF(e.target.value);
     setFormData(prev => ({ ...prev, cpf: formatted }));
+    
+    // Validate CPF
+    if (formatted.length === 14) {
+      const isValid = isValidCPF(formatted);
+      setValidation(prev => ({
+        ...prev,
+        cpf: { isValid, isTouched: true }
+      }));
+    } else if (formatted.length > 0) {
+      setValidation(prev => ({
+        ...prev,
+        cpf: { isValid: false, isTouched: true }
+      }));
+    }
   };
 
   const handleDateChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const formatted = formatDate(e.target.value);
     setFormData(prev => ({ ...prev, birthDate: formatted }));
-  };
-
-  const validateAge = (dateString: string) => {
-    const parts = dateString.split('/');
-    if (parts.length !== 3) return -1;
     
-    const day = parseInt(parts[0], 10);
-    const month = parseInt(parts[1], 10);
-    const year = parseInt(parts[2], 10);
-    
-    if (day < 1 || day > 31 || month < 1 || month > 12 || year < 1900 || year > new Date().getFullYear()) {
-      return -1;
+    // Validate date
+    if (formatted.length === 10) {
+      const isValid = isValidDate(formatted);
+      const age = calculateAge(formatted);
+      const isValidAge = isValidVotingAge(formatted);
+      setValidation(prev => ({
+        ...prev,
+        birthDate: { isValid: isValid && isValidAge, isTouched: true, age }
+      }));
+    } else if (formatted.length > 0) {
+      setValidation(prev => ({
+        ...prev,
+        birthDate: { isValid: false, isTouched: true, age: -1 }
+      }));
     }
-    
-    const birthDate = new Date(year, month - 1, day);
-    const today = new Date();
-    let age = today.getFullYear() - birthDate.getFullYear();
-    const m = today.getMonth() - birthDate.getMonth();
-    if (m < 0 || (m === 0 && today.getDate() < birthDate.getDate())) {
-      age--;
-    }
-    return age;
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -116,31 +131,20 @@ export default function Register() {
     }
 
     // Validação de CPF
-    const cpfDigits = formData.cpf.replace(/\D/g, "");
-    if (cpfDigits.length !== 11) {
+    if (!validation.cpf.isValid) {
       toast({
         title: "CPF inválido",
-        description: "O CPF deve conter 11 dígitos.",
+        description: "Por favor, insira um CPF válido.",
         variant: "destructive"
       });
       return;
     }
 
-    // Validação de Idade
-    const age = validateAge(formData.birthDate);
-    if (age < 0) {
+    // Validação de Data
+    if (!validation.birthDate.isValid) {
       toast({
-        title: "Data inválida",
-        description: "Por favor, insira uma data válida no formato DD/MM/AAAA.",
-        variant: "destructive"
-      });
-      return;
-    }
-
-    if (age < 16) {
-      toast({
-        title: "Você não pode votar",
-        description: `Você tem ${age} anos. A idade mínima é 16 anos.`,
+        title: "Data ou idade inválida",
+        description: "Por favor, insira uma data válida. Você deve ter pelo menos 16 anos.",
         variant: "destructive"
       });
       return;
@@ -159,6 +163,7 @@ export default function Register() {
 
     try {
       // Preparar dados para registro
+      const cpfDigits = formData.cpf.replace(/\D/g, "");
       const voterDataForDB = {
         cpf: cpfDigits,
         name: formData.name,
@@ -179,7 +184,7 @@ export default function Register() {
         estado: electionConfig.state,
         municipio: electionConfig.municipality,
         bairro: formData.bairro,
-        age
+        age: validation.birthDate.age
       };
       localStorage.setItem("currentVoter", JSON.stringify(voterDisplay));
       
@@ -252,31 +257,70 @@ export default function Register() {
           {/* CPF */}
           <div className="space-y-2">
             <Label htmlFor="cpf" className="text-gray-200">CPF *</Label>
-            <Input 
-              id="cpf" 
-              name="cpf"
-              value={formData.cpf}
-              onChange={handleCPFChange}
-              placeholder="000.000.000-00"
-              maxLength={14}
-              className="bg-white/10 border-white/20 text-white placeholder:text-gray-400"
-              required
-            />
+            <div className="relative">
+              <Input 
+                id="cpf" 
+                name="cpf"
+                value={formData.cpf}
+                onChange={handleCPFChange}
+                placeholder="000.000.000-00"
+                maxLength={14}
+                className="bg-white/10 border-white/20 text-white placeholder:text-gray-400 pr-12"
+                required
+              />
+              {validation.cpf.isTouched && (
+                <div className="absolute right-3 top-1/2 transform -translate-y-1/2">
+                  {validation.cpf.isValid ? (
+                    <CheckCircle2 className="w-5 h-5 text-green-400" />
+                  ) : (
+                    <AlertCircle className="w-5 h-5 text-red-400" />
+                  )}
+                </div>
+              )}
+            </div>
+            {validation.cpf.isTouched && !validation.cpf.isValid && formData.cpf.length === 14 && (
+              <p className="text-red-400 text-sm">CPF inválido. Verifique os dígitos.</p>
+            )}
           </div>
 
           {/* Data de Nascimento */}
           <div className="space-y-2">
             <Label htmlFor="birthDate" className="text-gray-200">Data de Nascimento *</Label>
-            <Input 
-              id="birthDate" 
-              name="birthDate"
-              value={formData.birthDate}
-              onChange={handleDateChange}
-              placeholder="DD/MM/AAAA"
-              maxLength={10}
-              className="bg-white/10 border-white/20 text-white placeholder:text-gray-400"
-              required
-            />
+            <div className="relative">
+              <Input 
+                id="birthDate" 
+                name="birthDate"
+                value={formData.birthDate}
+                onChange={handleDateChange}
+                placeholder="DD/MM/AAAA"
+                maxLength={10}
+                className="bg-white/10 border-white/20 text-white placeholder:text-gray-400 pr-12"
+                required
+              />
+              {validation.birthDate.isTouched && (
+                <div className="absolute right-3 top-1/2 transform -translate-y-1/2">
+                  {validation.birthDate.isValid ? (
+                    <CheckCircle2 className="w-5 h-5 text-green-400" />
+                  ) : (
+                    <AlertCircle className="w-5 h-5 text-red-400" />
+                  )}
+                </div>
+              )}
+            </div>
+            {validation.birthDate.isTouched && (
+              <>
+                {!validation.birthDate.isValid && formData.birthDate.length === 10 && (
+                  <p className="text-red-400 text-sm">
+                    {validation.birthDate.age >= 0 && validation.birthDate.age < 16
+                      ? `Você tem ${validation.birthDate.age} anos. A idade mínima é 16 anos.`
+                      : "Data inválida. Verifique o formato DD/MM/AAAA."}
+                  </p>
+                )}
+                {validation.birthDate.isValid && validation.birthDate.age >= 0 && (
+                  <p className="text-green-400 text-sm">✓ {validation.birthDate.age} anos - Elegível para votar</p>
+                )}
+              </>
+            )}
           </div>
 
           {/* Bairro */}
@@ -302,8 +346,8 @@ export default function Register() {
           <div className="flex gap-4 pt-6">
             <Button 
               type="submit" 
-              disabled={isSubmitting || registerMutation.isPending}
-              className="flex-1 bg-gradient-to-r from-green-500 to-blue-600 hover:from-green-600 hover:to-blue-700 text-white font-bold py-3 rounded-lg gap-2"
+              disabled={isSubmitting || registerMutation.isPending || !validation.cpf.isValid || !validation.birthDate.isValid}
+              className="flex-1 bg-gradient-to-r from-green-500 to-blue-600 hover:from-green-600 hover:to-blue-700 text-white font-bold py-3 rounded-lg gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {registerMutation.isPending ? (
                 <>

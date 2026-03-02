@@ -193,24 +193,10 @@ export default function Results() {
         linkPNG.href = canvas.toDataURL('image/png');
         linkPNG.click();
         
-        // Opção 2: Criar PDF também
-        const pdf = new jsPDF({
-          orientation: 'portrait',
-          unit: 'mm',
-          format: 'a4'
-        });
-        
-        const imgData = canvas.toDataURL('image/png');
-        const imgWidth = 210; // A4 width in mm
-        const pageHeight = 297; // A4 height in mm
-        const imgHeight = (canvas.height * imgWidth) / canvas.width;
-        
-        pdf.addImage(imgData, 'PNG', 0, 0, imgWidth, imgHeight);
-        pdf.save(`resultado-eleitoral-${new Date().toISOString().split('T')[0]}.pdf`);
         
         toast({
           title: "✅ Relatório Baixado",
-          description: "Arquivo PNG e PDF foram salvos com sucesso!",
+          description: "Arquivo PNG foi salvo com sucesso!",
           className: "bg-green-600 text-white border-none"
         });
       } catch (error) {
@@ -244,16 +230,29 @@ export default function Results() {
 
   // FIX #3: Corrigir botão "Limpar Filtros" - Agora funciona corretamente
   const handleClearFilters = () => {
+    // Limpar TUDO: votos, candidatos, total, líder
+    localStorage.removeItem("votes");
+    localStorage.removeItem("currentVoter");
+    localStorage.removeItem("candidates");
+    
+    // Resetar estado
+    setVotes([]);
+    setFilteredVotes([]);
     setSelectedEstado("");
     setSelectedMunicipio("");
     setMunicipios([]);
-    setFilteredVotes(votes);
-    processData(votes);
+    setChartData({
+      byCandidate: [],
+      byLocation: [],
+      byMunicipio: [],
+      timeline: [],
+      candidateByLocation: []
+    });
     
     toast({
-      title: "✅ Filtros Limpos",
-      description: "Exibindo todos os votos novamente.",
-      className: "bg-blue-600 text-white border-none"
+      title: "✅ Tudo Limpo",
+      description: "Todos os votos, candidatos e dados foram removidos.",
+      className: "bg-red-600 text-white border-none"
     });
   };
 
@@ -385,7 +384,7 @@ export default function Results() {
                 <div className="p-2 bg-purple-500/20 rounded-lg">
                   <MapPin className="w-6 h-6 text-purple-400" />
                 </div>
-                <h3 className="text-purple-100 font-medium">Localidade Mais Ativa</h3>
+                <h3 className="text-purple-100 font-medium">Local de Maior Aceitação</h3>
               </div>
               <p className="text-lg font-bold text-white truncate">
                 {chartData.byLocation[0]?.location || "N/A"}

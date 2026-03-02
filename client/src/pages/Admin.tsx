@@ -242,24 +242,15 @@ export default function Admin() {
 
           {/* Município */}
           <div className="space-y-2">
-            <Label htmlFor="municipio" className="text-gray-200">Município *</Label>
-            <select
-              id="municipio"
+            <Label htmlFor="municipio" className="text-gray-200">Município * (Digite o nome)</Label>
+            <Input 
+              id="municipio" 
               value={formData.municipio}
               onChange={(e) => setFormData(prev => ({ ...prev, municipio: e.target.value }))}
-              disabled={!formData.estado || loadingMunicipios}
-              className="w-full px-4 py-2 rounded-lg bg-white/10 border border-white/20 text-white placeholder:text-gray-400 focus:outline-none focus:border-white/40 disabled:opacity-50"
+              placeholder="Digite o nome do município"
+              className="bg-white/10 border-white/20 text-white placeholder:text-gray-400"
               required
-            >
-              <option value="">
-                {loadingMunicipios ? "Carregando..." : "Selecione um município"}
-              </option>
-              {municipios.map(municipio => (
-                <option key={municipio.id} value={municipio.nome}>
-                  {municipio.nome}
-                </option>
-              ))}
-            </select>
+            />
           </div>
 
           {/* Election Name */}

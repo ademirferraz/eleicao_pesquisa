@@ -10,8 +10,8 @@ import Voting from "./pages/Voting";
 import AdminLogin from "./pages/AdminLogin";
 import AdminPanel from "./pages/AdminPanel";
 import Results from "./pages/Results";
-
 function Router() {
+  // make sure to consider if you need authentication for certain routes
   return (
     <Switch>
       <Route path="/" component={Welcome} />

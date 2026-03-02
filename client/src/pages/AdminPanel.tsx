@@ -21,19 +21,7 @@ export default function AdminPanel() {
   }, []);
 
   const handlePartialResult = () => {
-    const votes = JSON.parse(localStorage.getItem("votes") || "[]");
-    const counts = votes.reduce((acc: any, vote: any) => {
-      acc[vote.candidateName] = (acc[vote.candidateName] || 0) + 1;
-      return acc;
-    }, {});
-    
-    let resultText = "--- RESULTADO PARCIAL ---\n\n";
-    Object.entries(counts).forEach(([name, count]) => {
-      resultText += `${name}: ${count} votos\n`;
-    });
-    resultText += `\nTotal de Votos: ${votes.length}`;
-    
-    alert(resultText || "Nenhum voto computado ainda.");
+    setLocation("/resultados");
   };
 
   const handlePersistSimulation = () => {
@@ -60,19 +48,20 @@ export default function AdminPanel() {
   const handleGenerateReport = () => {
     const votes = JSON.parse(localStorage.getItem("votes") || "[]");
     
-    // Agrupamento por Região
-    const byRegion = votes.reduce((acc: any, vote: any) => {
-      if (!acc[vote.voterRegion]) acc[vote.voterRegion] = {};
-      acc[vote.voterRegion][vote.candidateName] = (acc[vote.voterRegion][vote.candidateName] || 0) + 1;
+    // Agrupamento por Localidade (Estado + Município)
+    const byLocation = votes.reduce((acc: any, vote: any) => {
+      const location = `${vote.estadoNome || 'N/A'} - ${vote.municipioNome || 'N/A'}`;
+      if (!acc[location]) acc[location] = {};
+      acc[location][vote.candidateName] = (acc[location][vote.candidateName] || 0) + 1;
       return acc;
     }, {});
 
     let report = "--- RELATÓRIO GERAL ---\n\n";
     report += `Total de Votos: ${votes.length}\n\n`;
     
-    report += "--- POR REGIÃO ---\n";
-    Object.entries(byRegion).forEach(([region, candidates]: [string, any]) => {
-      report += `\n[${region}]\n`;
+    report += "--- POR LOCALIDADE (ESTADO - MUNICÍPIO) ---\n";
+    Object.entries(byLocation).forEach(([location, candidates]: [string, any]) => {
+      report += `\n[${location}]\n`;
       Object.entries(candidates).forEach(([name, count]) => {
         report += `  - ${name}: ${count}\n`;
       });
@@ -83,7 +72,14 @@ export default function AdminPanel() {
   };
 
   const handleGenerateTestVoters = () => {
-    const regions = ["Norte", "Nordeste", "Centro-Oeste", "Sudeste", "Sul"];
+    const estados = [
+      { nome: "São Paulo", municipios: ["São Paulo", "Campinas", "Santos"] },
+      { nome: "Rio de Janeiro", municipios: ["Rio de Janeiro", "Niterói", "Duque de Caxias"] },
+      { nome: "Minas Gerais", municipios: ["Belo Horizonte", "Uberlândia", "Contagem"] },
+      { nome: "Bahia", municipios: ["Salvador", "Feira de Santana", "Vitória da Conquista"] },
+      { nome: "Paraná", municipios: ["Curitiba", "Londrina", "Maringá"] }
+    ];
+    
     const candidates = [
       { id: 10, name: "Capitão Boanerges" },
       { id: 20, name: "Judite Alapenha" },
@@ -96,12 +92,14 @@ export default function AdminPanel() {
     const newVotes = [];
     for (let i = 0; i < 100; i++) {
       const randomCandidate = candidates[Math.floor(Math.random() * candidates.length)];
-      const randomRegion = regions[Math.floor(Math.random() * regions.length)];
+      const randomEstado = estados[Math.floor(Math.random() * estados.length)];
+      const randomMunicipio = randomEstado.municipios[Math.floor(Math.random() * randomEstado.municipios.length)];
       
       newVotes.push({
         candidateId: randomCandidate.id,
         candidateName: randomCandidate.name,
-        voterRegion: randomRegion,
+        estadoNome: randomEstado.nome,
+        municipioNome: randomMunicipio,
         timestamp: new Date().toISOString(),
         isTest: true
       });
@@ -114,7 +112,7 @@ export default function AdminPanel() {
     
     toast({
       title: "Sucesso",
-      description: "100 eleitores de teste gerados e votos computados.",
+      description: "100 eleitores de teste gerados com dados geográficos (Estado + Município).",
       className: "bg-blue-600 text-white border-none"
     });
   };
@@ -165,7 +163,7 @@ export default function AdminPanel() {
           </h3>
           
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <Button variant="outline" onClick={handlePartialResult} className="bg-white/5 border-white/20 text-white hover:bg-white/10">
+            <Button onClick={handlePartialResult} className="bg-green-600/80 hover:bg-green-500 border border-green-400/30 text-white">
               I - Ver Resultado Parcial
             </Button>
             <Button variant="outline" onClick={handlePersistSimulation} className="bg-white/5 border-white/20 text-white hover:bg-white/10">

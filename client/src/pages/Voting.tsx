@@ -15,6 +15,39 @@ const CANDIDATES = [
   { id: 15, name: "Gilvado do Sindicato", number: 15, image: "/images/candidate-15.jpg" },
 ];
 
+// 🔊 Função para tocar som de urna eletrônica
+const playBallotSound = () => {
+  try {
+    const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
+    const now = audioContext.currentTime;
+    
+    // Primeiro beep (mais agudo) - 800 Hz
+    const osc1 = audioContext.createOscillator();
+    const gain1 = audioContext.createGain();
+    osc1.connect(gain1);
+    gain1.connect(audioContext.destination);
+    osc1.frequency.value = 800;
+    gain1.gain.setValueAtTime(0.3, now);
+    gain1.gain.exponentialRampToValueAtTime(0.01, now + 0.1);
+    osc1.start(now);
+    osc1.stop(now + 0.1);
+    
+    // Segundo beep (mais grave) - 600 Hz
+    const osc2 = audioContext.createOscillator();
+    const gain2 = audioContext.createGain();
+    osc2.connect(gain2);
+    gain2.connect(audioContext.destination);
+    osc2.frequency.value = 600;
+    gain2.gain.setValueAtTime(0, now + 0.15);
+    gain2.gain.setValueAtTime(0.3, now + 0.15);
+    gain2.gain.exponentialRampToValueAtTime(0.01, now + 0.25);
+    osc2.start(now + 0.15);
+    osc2.stop(now + 0.25);
+  } catch (error) {
+    console.log("Som não disponível neste navegador");
+  }
+};
+
 export default function Voting() {
   const [, setLocation] = useLocation();
   const { toast } = useToast();
@@ -49,6 +82,9 @@ export default function Voting() {
       timestamp: new Date().toISOString()
     });
     localStorage.setItem("votes", JSON.stringify(votes));
+
+    // 🔊 Tocar som de urna
+    playBallotSound();
 
     toast({
       title: "Voto Computado com Sucesso!",

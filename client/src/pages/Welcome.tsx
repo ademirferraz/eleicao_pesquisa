@@ -1,7 +1,7 @@
 import { Button } from "@/components/ui/button";
 import Layout from "@/components/Layout";
 import { Link } from "wouter";
-import { Vote, ShieldCheck } from "lucide-react";
+import { Vote, ShieldCheck, BarChart3 } from "lucide-react";
 
 export default function Welcome() {
   return (
@@ -45,6 +45,12 @@ export default function Welcome() {
           <Link href="/cadastro" className="w-full">
             <Button className="w-full h-14 text-lg font-bold bg-gradient-to-r from-green-600 to-blue-600 hover:from-green-500 hover:to-blue-500 border-0 shadow-lg shadow-blue-900/50 transition-all hover:scale-105">
               Cadastre-se
+            </Button>
+          </Link>
+          
+          <Link href="/resultados" className="w-full">
+            <Button variant="outline" className="w-full h-12 text-base font-semibold bg-white/10 border-white/30 text-white hover:bg-white/20 gap-2">
+              <BarChart3 className="w-4 h-4" /> Ver Resultados
             </Button>
           </Link>
           

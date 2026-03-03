@@ -203,6 +203,9 @@ export default function Voting() {
                   }`}
                 >
                   <div className="text-center">
+                    {candidate.photo && (
+                      <img src={candidate.photo} alt={candidate.name} className="w-32 h-40 rounded-lg object-cover mx-auto mb-4" />
+                    )}
                     <p className="text-4xl font-bold text-blue-400 mb-2">{candidate.number}</p>
                     <p className="text-white font-semibold text-lg">{candidate.name}</p>
                     <p className="text-gray-400 text-sm mt-2">{candidate.party || "Sem partido"}</p>

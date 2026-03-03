@@ -9,16 +9,28 @@ import {
   Users, Edit, Plus, X 
 } from "lucide-react";
 
-// Componente simples de Modal para Edição/Inclusão
+// Componente Modal para Edição/Inclusão com upload de foto
 const CandidateModal = ({ isOpen, onClose, onSave, candidate, count }: any) => {
   const [name, setName] = useState(candidate?.name || "");
   const [number, setNumber] = useState(candidate?.number?.toString() || "");
+  const [photo, setPhoto] = useState(candidate?.photo || "");
+
+  const handlePhotoChange = (e: any) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        setPhoto(event.target?.result as string);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
 
   if (!isOpen) return null;
 
   return (
     <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-      <div className="bg-[#1a1a1a] border border-white/10 p-6 rounded-2xl w-full max-w-md">
+      <div className="bg-[#1a1a1a] border border-white/10 p-6 rounded-2xl w-full max-w-md max-h-[90vh] overflow-y-auto">
         <h3 className="text-xl font-bold text-white mb-4">
           {candidate ? "Editar Candidato" : `Incluir Novo (${count}/10)`}
         </h3>
@@ -36,9 +48,23 @@ const CandidateModal = ({ isOpen, onClose, onSave, candidate, count }: any) => {
             onChange={(e) => setNumber(e.target.value)}
             className="bg-white/5 text-white"
           />
+          <div>
+            <label className="text-gray-300 text-sm">Foto do Candidato</label>
+            <input 
+              type="file" 
+              accept="image/*"
+              onChange={handlePhotoChange}
+              className="w-full mt-2 px-4 py-2 rounded-lg bg-white/10 border border-white/20 text-white"
+            />
+            {photo && (
+              <div className="mt-3">
+                <img src={photo} alt="Preview" className="w-24 h-24 rounded-lg object-cover" />
+              </div>
+            )}
+          </div>
           <div className="flex gap-2 pt-4">
             <Button onClick={onClose} variant="ghost" className="flex-1 text-white">Cancelar</Button>
-            <Button onClick={() => onSave({ number: parseInt(number), name })} className="flex-1 bg-blue-600 hover:bg-blue-500">
+            <Button onClick={() => onSave({ number: parseInt(number), name, photo })} className="flex-1 bg-blue-600 hover:bg-blue-500">
               Salvar
             </Button>
           </div>
@@ -253,7 +279,14 @@ export default function Admin() {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
             {candidatos.map((c) => (
               <div key={c.number} className="flex justify-between items-center p-3 bg-black/20 rounded-lg border border-white/5">
-                <span className="text-white font-medium">{c.number} - {c.name}</span>
+                <div className="flex items-center gap-3 flex-1">
+                  {c.photo && (
+                    <img src={c.photo} alt={c.name} className="w-10 h-10 rounded object-cover" />
+                  )}
+                  <div>
+                    <p className="text-white font-medium">{c.number} - {c.name}</p>
+                  </div>
+                </div>
                 <div className="flex gap-2">
                   <Button size="icon" variant="ghost" onClick={() => { setEditingCandidate(c); setIsModalOpen(true); }}>
                     <Edit className="w-4 h-4 text-gray-400" />

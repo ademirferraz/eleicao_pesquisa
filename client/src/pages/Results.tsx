@@ -278,10 +278,24 @@ export default function Results() {
             </div>
           </div>
 
-          {/* Gráfico de Barras */}
+          {/* Gráfico de Barras com Fotos */}
           {chartData.length > 0 ? (
             <div className="mb-8">
               <h3 className="text-white font-bold mb-4">Votos por Candidato</h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-8">
+                {chartData.map((entry, index) => {
+                  const candidate = candidatos.find(c => c.name === entry.name);
+                  return (
+                    <div key={entry.name} className="bg-black/20 p-4 rounded-lg border border-white/10">
+                      {candidate?.photo && (
+                        <img src={candidate.photo} alt={entry.name} className="w-full h-32 rounded-lg object-cover mb-3" />
+                      )}
+                      <p className="text-white font-semibold">{entry.name}</p>
+                      <p className="text-2xl font-bold text-blue-400 mt-2">{entry.votos} votos</p>
+                    </div>
+                  );
+                })}
+              </div>
               <ResponsiveContainer width="100%" height={300}>
                 <BarChart data={chartData}>
                   <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.1)" />

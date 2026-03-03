@@ -64,6 +64,8 @@ export default function Admin() {
   const [municipios, setMunicipios] = useState<any[]>([]);
   const [loadingMunicipios, setLoadingMunicipios] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+  const [editingCandidate, setEditingCandidate] = useState<any>(null);
+  const [editForm, setEditForm] = useState({ number: "", name: "", party: "", position: "" });
   
   // Load current election config
   const { data: currentConfig } = trpc.admin.getElectionConfig.useQuery();
@@ -73,6 +75,7 @@ export default function Admin() {
   const { data: candidates, refetch: refetchCandidates } = trpc.candidates.list.useQuery();
   const createCandidateMutation = trpc.candidates.create.useMutation();
   const deleteCandidateMutation = trpc.candidates.delete.useMutation();
+  const updateCandidateMutation = trpc.candidates.update.useMutation();
   
   // Load municipalities when state changes
   useEffect(() => {
@@ -215,6 +218,49 @@ export default function Admin() {
       toast({
         title: "Erro",
         description: error.message || "Não foi possível adicionar o candidato.",
+        variant: "destructive"
+      });
+    }
+  };
+
+  const handleEditCandidate = (candidate: any) => {
+    setEditingCandidate(candidate);
+    setEditForm({
+      number: candidate.number.toString(),
+      name: candidate.name,
+      party: candidate.party || "",
+      position: candidate.position || ""
+    });
+  };
+
+  const handleSaveEdit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingCandidate) return;
+
+    try {
+      await updateCandidateMutation.mutateAsync({
+        id: editingCandidate.id,
+        data: {
+          number: parseInt(editForm.number),
+          name: editForm.name,
+          party: editForm.party || undefined,
+          position: editForm.position || undefined,
+        }
+      });
+      
+      setEditingCandidate(null);
+      refetchCandidates();
+      
+      toast({
+        title: "Candidato Atualizado",
+        description: "Dados do candidato foram atualizados com sucesso!",
+        className: "bg-green-600 text-white border-none"
+      });
+    } catch (error: any) {
+      console.error("Erro ao atualizar candidato:", error);
+      toast({
+        title: "Erro",
+        description: error.message || "Nao foi possivel atualizar o candidato.",
         variant: "destructive"
       });
     }
@@ -514,7 +560,13 @@ export default function Admin() {
                           <td className="py-3 px-4">{candidate.name}</td>
                           <td className="py-3 px-4">{candidate.party || "-"}</td>
                           <td className="py-3 px-4">{candidate.position || "-"}</td>
-                          <td className="py-3 px-4 text-center">
+                          <td className="py-3 px-4 text-center flex gap-2 justify-center">
+                            <Button
+                              onClick={() => handleEditCandidate(candidate)}
+                              className="bg-blue-600 hover:bg-blue-700 text-white gap-2 py-1 px-3 text-sm"
+                            >
+                              Editar
+                            </Button>
                             <Button
                               onClick={() => handleDeleteCandidate(candidate.id)}
                               disabled={deleteCandidateMutation.isPending}
@@ -532,6 +584,75 @@ export default function Admin() {
               ) : (
                 <p className="text-gray-400 text-center py-8">Nenhum candidato cadastrado ainda.</p>
               )}
+            </div>
+          </div>
+        )}
+
+        {/* Edit Modal */}
+        {editingCandidate && (
+          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+            <div className="bg-gray-900 rounded-lg p-6 max-w-md w-full border border-white/10">
+              <h3 className="text-white font-semibold mb-4 text-lg">Editar Candidato</h3>
+              
+              <form onSubmit={handleSaveEdit} className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="edit-number" className="text-gray-200">Numero</Label>
+                  <Input 
+                    id="edit-number" 
+                    type="number"
+                    value={editForm.number}
+                    onChange={(e) => setEditForm(prev => ({ ...prev, number: e.target.value }))}
+                    className="bg-white/10 border-white/20 text-white placeholder:text-gray-400"
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="edit-name" className="text-gray-200">Nome</Label>
+                  <Input 
+                    id="edit-name" 
+                    value={editForm.name}
+                    onChange={(e) => setEditForm(prev => ({ ...prev, name: e.target.value }))}
+                    className="bg-white/10 border-white/20 text-white placeholder:text-gray-400"
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="edit-party" className="text-gray-200">Partido</Label>
+                  <Input 
+                    id="edit-party" 
+                    value={editForm.party}
+                    onChange={(e) => setEditForm(prev => ({ ...prev, party: e.target.value }))}
+                    className="bg-white/10 border-white/20 text-white placeholder:text-gray-400"
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="edit-position" className="text-gray-200">Cargo</Label>
+                  <Input 
+                    id="edit-position" 
+                    value={editForm.position}
+                    onChange={(e) => setEditForm(prev => ({ ...prev, position: e.target.value }))}
+                    className="bg-white/10 border-white/20 text-white placeholder:text-gray-400"
+                  />
+                </div>
+
+                <div className="flex gap-3 pt-4">
+                  <Button
+                    type="button"
+                    onClick={() => setEditingCandidate(null)}
+                    className="flex-1 bg-gray-700 hover:bg-gray-600 text-white"
+                  >
+                    Cancelar
+                  </Button>
+                  <Button
+                    type="submit"
+                    disabled={updateCandidateMutation.isPending}
+                    className="flex-1 bg-blue-600 hover:bg-blue-700 text-white"
+                  >
+                    {updateCandidateMutation.isPending ? "Salvando..." : "Salvar"}
+                  </Button>
+                </div>
+              </form>
             </div>
           </div>
         )}

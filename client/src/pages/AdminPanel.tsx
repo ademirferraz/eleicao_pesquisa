@@ -1,190 +1,270 @@
-import { useState, useEffect } from "react";
-import { useLocation } from "wouter";
+import React, { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
-import Layout from "@/components/Layout";
-import { ArrowLeft, LogOut, Trash2, Save, FileBarChart, Users, Edit } from "lucide-react";
+import { ArrowLeft, Trash2, Save, Upload } from "lucide-react";
+import { useLocation } from "wouter";
 
 export default function AdminPanel() {
   const [, setLocation] = useLocation();
   const { toast } = useToast();
-  const [stats, setStats] = useState({ totalVotes: 0, candidates: 0 });
 
+  const [estado, setEstado] = useState("PE");
+  const [cidade, setCidade] = useState("");
+  const [candidatos, setCandidatos] = useState<any[]>([]);
+  const [novoNome, setNovoNome] = useState("");
+
+  // Carregar dados do localStorage ao montar
   useEffect(() => {
-    // Carregar estatísticas iniciais
-    const votes = JSON.parse(localStorage.getItem("votes") || "[]");
-    // Simulação de contagem de candidatos (fixo por enquanto)
-    setStats({
-      totalVotes: votes.length,
-      candidates: 6
-    });
+    const estadoSalvo = localStorage.getItem("eleicao_estado") || "PE";
+    const cidadeSalva = localStorage.getItem("eleicao_cidade") || "";
+    const candidatosSalvos = localStorage.getItem("eleicao_candidatos");
+
+    setEstado(estadoSalvo);
+    setCidade(cidadeSalva);
+    if (candidatosSalvos) {
+      setCandidatos(JSON.parse(candidatosSalvos));
+    }
   }, []);
 
-  const handlePartialResult = () => {
-    setLocation("/resultados");
-  };
-
-  const handlePersistSimulation = () => {
-    toast({
-      title: "Simulação Persistida",
-      description: "Dados salvos com segurança no armazenamento local.",
-      className: "bg-green-600 text-white border-none"
-    });
-  };
-
-  const handleClearAll = () => {
-    if (confirm("ATENÇÃO: Isso apagará TODOS os votos e reiniciará o sistema. Deseja continuar?")) {
-      localStorage.removeItem("votes");
-      localStorage.removeItem("currentVoter");
-      setStats({ ...stats, totalVotes: 0 });
+  // 1. FUNÇÃO DO BOTÃO GRAVAR (Estado e Cidade)
+  const gravarConfiguracao = () => {
+    if (!cidade.trim()) {
       toast({
-        title: "Sistema Limpo",
-        description: "Todos os dados foram apagados.",
-        variant: "destructive"
+        title: "Erro",
+        description: "Digite a cidade antes de gravar!",
+        variant: "destructive",
       });
+      return;
     }
-  };
-
-  const handleGenerateReport = () => {
-    const votes = JSON.parse(localStorage.getItem("votes") || "[]");
-    
-    // Agrupamento por Localidade (Estado + Município)
-    const byLocation = votes.reduce((acc: any, vote: any) => {
-      const location = `${vote.estadoNome || 'N/A'} - ${vote.municipioNome || 'N/A'}`;
-      if (!acc[location]) acc[location] = {};
-      acc[location][vote.candidateName] = (acc[location][vote.candidateName] || 0) + 1;
-      return acc;
-    }, {});
-
-    let report = "--- RELATÓRIO GERAL ---\n\n";
-    report += `Total de Votos: ${votes.length}\n\n`;
-    
-    report += "--- POR LOCALIDADE (ESTADO - MUNICÍPIO) ---\n";
-    Object.entries(byLocation).forEach(([location, candidates]: [string, any]) => {
-      report += `\n[${location}]\n`;
-      Object.entries(candidates).forEach(([name, count]) => {
-        report += `  - ${name}: ${count}\n`;
-      });
-    });
-
-    console.log(report);
-    alert("Relatório gerado no console e pronto para exportação (Simulação).");
-  };
-
-  const handleGenerateTestVoters = () => {
-    const estados = [
-      { nome: "São Paulo", municipios: ["São Paulo", "Campinas", "Santos"] },
-      { nome: "Rio de Janeiro", municipios: ["Rio de Janeiro", "Niterói", "Duque de Caxias"] },
-      { nome: "Minas Gerais", municipios: ["Belo Horizonte", "Uberlândia", "Contagem"] },
-      { nome: "Bahia", municipios: ["Salvador", "Feira de Santana", "Vitória da Conquista"] },
-      { nome: "Paraná", municipios: ["Curitiba", "Londrina", "Maringá"] }
-    ];
-    
-    const candidates = [
-      { id: 10, name: "Capitão Boanerges" },
-      { id: 20, name: "Judite Alapenha" },
-      { id: 11, name: "Coronel Alexandre Bilica" },
-      { id: 40, name: "Washington Azevedo" },
-      { id: 50, name: "Daniel Godoy" },
-      { id: 15, name: "Gilvado do Sindicato" }
-    ];
-
-    const newVotes = [];
-    for (let i = 0; i < 100; i++) {
-      const randomCandidate = candidates[Math.floor(Math.random() * candidates.length)];
-      const randomEstado = estados[Math.floor(Math.random() * estados.length)];
-      const randomMunicipio = randomEstado.municipios[Math.floor(Math.random() * randomEstado.municipios.length)];
-      
-      newVotes.push({
-        candidateId: randomCandidate.id,
-        candidateName: randomCandidate.name,
-        estadoNome: randomEstado.nome,
-        municipioNome: randomMunicipio,
-        timestamp: new Date().toISOString(),
-        isTest: true
-      });
-    }
-
-    const currentVotes = JSON.parse(localStorage.getItem("votes") || "[]");
-    localStorage.setItem("votes", JSON.stringify([...currentVotes, ...newVotes]));
-    
-    setStats(prev => ({ ...prev, totalVotes: prev.totalVotes + 100 }));
-    
+    localStorage.setItem("eleicao_estado", estado);
+    localStorage.setItem("eleicao_cidade", cidade);
     toast({
-      title: "Sucesso",
-      description: "100 eleitores de teste gerados com dados geográficos (Estado + Município).",
-      className: "bg-blue-600 text-white border-none"
+      title: "Sucesso!",
+      description: `Eleição configurada para ${cidade} - ${estado}`,
     });
   };
+
+  // 2. FUNÇÃO DA FOTO REAL (Vincula ao nome e abre galeria/arquivo)
+  const selecionarFoto = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const arquivo = e.target.files?.[0];
+    if (!arquivo || !novoNome.trim()) {
+      toast({
+        title: "Erro",
+        description: "Digite o nome do candidato antes de escolher a foto!",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      const novoCandidato = {
+        id: Date.now(),
+        numero: Math.floor(Math.random() * 10000),
+        nome: novoNome,
+        partido: "Partido",
+        cargo: "Vereador",
+        foto: reader.result, // Aqui a imagem vira texto para o localStorage
+        votos: 0,
+      };
+      const listaAtualizada = [...candidatos, novoCandidato];
+      setCandidatos(listaAtualizada);
+      localStorage.setItem("eleicao_candidatos", JSON.stringify(listaAtualizada));
+      setNovoNome(""); // Limpa o campo de nome
+      toast({
+        title: "Sucesso!",
+        description: `Candidato ${novoNome} adicionado com foto!`,
+      });
+    };
+    reader.readAsDataURL(arquivo);
+  };
+
+  // Remover candidato
+  const removerCandidato = (id: number) => {
+    const listaAtualizada = candidatos.filter((c) => c.id !== id);
+    setCandidatos(listaAtualizada);
+    localStorage.setItem("eleicao_candidatos", JSON.stringify(listaAtualizada));
+    toast({
+      title: "Candidato removido",
+      description: "O candidato foi removido com sucesso.",
+    });
+  };
+
+  // 3. FUNÇÃO ZERAR TUDO (Limpa memória total)
+  const zerarTudo = () => {
+    if (
+      confirm(
+        "ATENÇÃO: Isso apagará TODOS os candidatos, fotos, cidades e votos. Confirma?"
+      )
+    ) {
+      localStorage.clear(); // Limpa o localStorage do navegador
+      setEstado("PE");
+      setCidade("");
+      setCandidatos([]);
+      toast({
+        title: "Sistema resetado",
+        description: "Todos os dados foram apagados com sucesso!",
+      });
+      setTimeout(() => window.location.reload(), 1000); // Recarrega a página
+    }
+  };
+
+  const ESTADOS = [
+    "AC", "AL", "AP", "AM", "BA", "CE", "DF", "ES", "GO", "MA",
+    "MT", "MS", "MG", "PA", "PB", "PR", "PE", "PI", "RJ", "RN",
+    "RS", "RO", "RR", "SC", "SP", "SE", "TO"
+  ];
 
   return (
-    <Layout>
-      <div className="glass-panel rounded-3xl p-8 w-full max-w-4xl mx-auto animate-in fade-in duration-500">
-        
+    <div className="min-h-screen bg-slate-900 text-white p-6">
+      <div className="max-w-4xl mx-auto">
         {/* Header */}
-        <div className="flex justify-between items-center mb-8 border-b border-white/10 pb-6">
-          <div className="flex items-center gap-4">
-            <Button variant="ghost" onClick={() => setLocation("/")} className="text-white hover:bg-white/10 gap-2">
-              <ArrowLeft className="w-4 h-4" /> Sair do Painel
-            </Button>
-            <h2 className="text-2xl font-bold text-white">Painel Administrativo</h2>
-          </div>
-          <Button variant="destructive" onClick={() => setLocation("/")} className="gap-2 bg-red-500/80 hover:bg-red-600">
-            <LogOut className="w-4 h-4" /> Sair do App
-          </Button>
+        <div className="flex items-center justify-between mb-8">
+          <h1 className="text-3xl font-bold">Painel do Administrador</h1>
+          <button
+            onClick={() => setLocation("/")}
+            className="flex items-center gap-2 bg-slate-700 hover:bg-slate-600 px-4 py-2 rounded"
+          >
+            <ArrowLeft size={20} />
+            Voltar
+          </button>
         </div>
 
-        {/* Dashboard Stats */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
-          <div className="bg-white/5 rounded-xl p-6 border border-white/10">
-            <h3 className="text-gray-400 text-sm uppercase tracking-wider mb-2">Total de Votos</h3>
-            <p className="text-4xl font-bold text-white">{stats.totalVotes}</p>
-          </div>
-          <div className="bg-white/5 rounded-xl p-6 border border-white/10">
-            <h3 className="text-gray-400 text-sm uppercase tracking-wider mb-2">Candidatos Ativos</h3>
-            <p className="text-4xl font-bold text-white">{stats.candidates}</p>
-          </div>
-        </div>
-
-        {/* Actions Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8">
-          <Button onClick={handleGenerateTestVoters} className="h-16 text-lg bg-purple-600/80 hover:bg-purple-500 border border-purple-400/30">
-            <Users className="mr-2 h-5 w-5" /> Gerar 100 Eleitores (Teste)
-          </Button>
-          <Button onClick={() => setLocation("/resultados")} className="h-16 text-lg bg-blue-600/80 hover:bg-blue-500 border border-blue-400/30">
-            <FileBarChart className="mr-2 h-5 w-5" /> Ver Resultados Interativos
-          </Button>
-        </div>
-
-        {/* Management Controls */}
-        <div className="space-y-4">
-          <h3 className="text-white font-semibold mb-4 flex items-center gap-2">
-            <Edit className="w-4 h-4" /> Gestão de Dados
-          </h3>
+        {/* Bloco Estado e Cidade */}
+        <div className="mb-8 p-6 border border-blue-500 rounded-lg bg-slate-800">
+          <h2 className="text-xl font-bold mb-4">Configuração da Eleição</h2>
+          <p className="text-sm text-gray-300 mb-4">
+            <strong>Persistir Simulação:</strong> Salvar os dados da eleição (estado, cidade, candidatos, votos) no navegador para que continuem disponíveis mesmo após fechar e reabrir.
+          </p>
           
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <Button onClick={handlePartialResult} className="bg-green-600/80 hover:bg-green-500 border border-green-400/30 text-white">
-              I - Ver Resultado Parcial
-            </Button>
-            <Button variant="outline" onClick={handlePersistSimulation} className="bg-white/5 border-white/20 text-white hover:bg-white/10">
-              <Save className="mr-2 h-4 w-4" /> II - Persistir Simulação
-            </Button>
-            <Button variant="outline" onClick={handleClearAll} className="bg-red-500/10 border-red-500/30 text-red-200 hover:bg-red-500/20">
-              <Trash2 className="mr-2 h-4 w-4" /> III - Limpar Tudo
-            </Button>
+          <div className="flex gap-4 flex-wrap">
+            <div className="flex-1 min-w-[200px]">
+              <Label className="block mb-2">Estado</Label>
+              <select
+                value={estado}
+                onChange={(e) => setEstado(e.target.value)}
+                className="w-full bg-black text-white p-3 rounded border border-slate-600"
+              >
+                {ESTADOS.map((uf) => (
+                  <option key={uf} value={uf}>
+                    {uf}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div className="flex-1 min-w-[200px]">
+              <Label className="block mb-2">Cidade</Label>
+              <Input
+                value={cidade}
+                onChange={(e) => setCidade(e.target.value)}
+                placeholder="Digite o nome da cidade"
+                className="bg-white text-black"
+              />
+            </div>
+
+            <div className="flex items-end">
+              <Button
+                onClick={gravarConfiguracao}
+                className="bg-blue-600 hover:bg-blue-700 px-6 py-3 font-bold flex items-center gap-2"
+              >
+                <Save size={20} />
+                GRAVAR
+              </Button>
+            </div>
           </div>
 
-          <div className="grid grid-cols-2 gap-4 mt-4">
-             <Button variant="secondary" className="bg-white/10 text-white hover:bg-white/20">
-               Editar Candidatos
-             </Button>
-             <Button variant="secondary" className="bg-white/10 text-white hover:bg-white/20">
-               Excluir Candidatos
-             </Button>
+          {cidade && estado && (
+            <div className="mt-4 p-3 bg-blue-900/50 rounded border border-blue-500">
+              <p className="text-blue-200">
+                ✓ Eleição configurada para: <strong>{cidade} - {estado}</strong>
+              </p>
+            </div>
+          )}
+        </div>
+
+        {/* Bloco Candidato e Foto */}
+        <div className="mb-8 p-6 border border-green-500 rounded-lg bg-slate-800">
+          <h2 className="text-xl font-bold mb-4">Adicionar Candidato</h2>
+
+          <div className="flex gap-4 flex-wrap mb-6">
+            <div className="flex-1 min-w-[250px]">
+              <Label className="block mb-2">Nome do Candidato</Label>
+              <Input
+                value={novoNome}
+                onChange={(e) => setNovoNome(e.target.value)}
+                placeholder="Digite o nome do candidato"
+                className="bg-white text-black"
+              />
+            </div>
+
+            <div className="flex items-end">
+              <label className="bg-green-600 hover:bg-green-700 px-6 py-3 rounded cursor-pointer font-bold flex items-center gap-2 transition">
+                <Upload size={20} />
+                FOTO (Galeria/Pasta)
+                <input
+                  type="file"
+                  accept="image/*"
+                  onChange={selecionarFoto}
+                  className="hidden"
+                />
+              </label>
+            </div>
           </div>
         </div>
 
+        {/* Lista de Candidatos */}
+        {candidatos.length > 0 && (
+          <div className="mb-8 p-6 border border-purple-500 rounded-lg bg-slate-800">
+            <h2 className="text-xl font-bold mb-4">
+              Candidatos Cadastrados ({candidatos.length})
+            </h2>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {candidatos.map((candidato) => (
+                <div
+                  key={candidato.id}
+                  className="p-4 bg-slate-700 rounded border border-slate-600 hover:border-purple-500 transition"
+                >
+                  {candidato.foto && (
+                    <img
+                      src={candidato.foto}
+                      alt={candidato.nome}
+                      className="w-full h-40 object-cover rounded mb-3"
+                    />
+                  )}
+                  <h3 className="font-bold text-lg mb-2">{candidato.nome}</h3>
+                  <p className="text-sm text-gray-300 mb-3">
+                    Votos: <strong>{candidato.votos}</strong>
+                  </p>
+                  <button
+                    onClick={() => removerCandidato(candidato.id)}
+                    className="w-full bg-red-600 hover:bg-red-700 px-3 py-2 rounded font-bold flex items-center justify-center gap-2 transition"
+                  >
+                    <Trash2 size={18} />
+                    Remover
+                  </button>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Botão Vermelho Zerar */}
+        <div className="mt-12">
+          <Button
+            onClick={zerarTudo}
+            className="w-full bg-red-600 hover:bg-red-700 p-6 font-bold text-lg"
+          >
+            ⚠️ ZERAR TUDO (LIMPAR MEMÓRIA)
+          </Button>
+          <p className="text-xs text-gray-400 mt-2 text-center">
+            Aviso: Esta ação não pode ser desfeita. Todos os dados serão apagados.
+          </p>
+        </div>
       </div>
-    </Layout>
+    </div>
   );
 }

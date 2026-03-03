@@ -4,17 +4,6 @@ import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import Layout from "@/components/Layout";
 import { ArrowLeft, LogOut, CheckCircle2, Loader } from "lucide-react";
-import { trpc } from "@/lib/trpc";
-
-// Dados dos Candidatos
-const CANDIDATES = [
-  { id: 10, name: "Capitão Boanerges", number: 10, image: "/images/candidate-10.jpg" },
-  { id: 20, name: "Judite Alapenha", number: 20, image: "/images/candidate-20.jpg" },
-  { id: 11, name: "Coronel Alexandre Bilica", number: 11, image: "/images/candidate-11.jpg" },
-  { id: 40, name: "Washington Azevedo", number: 40, image: "/images/candidate-40.jpg" },
-  { id: 50, name: "Daniel Godoy", number: 50, image: "/images/candidate-50.jpg" },
-  { id: 15, name: "Gilvado do Sindicato", number: 15, image: "/images/candidate-15.jpg" },
-];
 
 // 🔊 Função para tocar som de urna eletrônica
 const playBallotSound = () => {
@@ -52,20 +41,26 @@ const playBallotSound = () => {
 export default function Voting() {
   const [, setLocation] = useLocation();
   const { toast } = useToast();
-  const castVoteMutation = trpc.votes.cast.useMutation();
+  
   const [selectedCandidate, setSelectedCandidate] = useState<number | null>(null);
   const [voter, setVoter] = useState<any>(null);
+  const [candidatos, setCandidatos] = useState<any[]>([]);
   const [isVoting, setIsVoting] = useState(false);
+  const [showConfirmation, setShowConfirmation] = useState(false);
 
   useEffect(() => {
     const storedVoter = localStorage.getItem("currentVoter");
+    const storedCands = JSON.parse(localStorage.getItem("candidatos") || "[]");
+    
+    setCandidatos(storedCands);
+
     if (!storedVoter) {
       toast({
         title: "Acesso negado",
         description: "Você precisa se cadastrar primeiro.",
         variant: "destructive"
       });
-      setLocation("/cadastro");
+      setLocation("/register");
     } else {
       setVoter(JSON.parse(storedVoter));
     }
@@ -77,180 +72,164 @@ export default function Voting() {
     setIsVoting(true);
 
     try {
-      const candidate = CANDIDATES.find(c => c.id === selectedCandidate);
+      const candidate = candidatos.find(c => c.number === selectedCandidate);
       
-      // Preparar dados do voto para o banco de dados
-      const voteData = {
-        voterId: 0, // Será preenchido pelo servidor se necessário
-        candidateId: selectedCandidate,
-        candidateNumber: candidate?.number || selectedCandidate,
-        state: voter.estadoSigla,
-        municipality: voter.municipio,
-        neighborhood: voter.bairro
+      if (!candidate) {
+        throw new Error("Candidato não encontrado");
+      }
+
+      // Registrar voto no localStorage
+      const votes = JSON.parse(localStorage.getItem("votes") || "[]");
+      const newVote = {
+        candidateName: candidate.name,
+        candidateNumber: candidate.number,
+        estado: voter.estado,
+        municipio: voter.municipio,
+        bairro: voter.bairro,
+        timestamp: new Date().toISOString(),
+        voterCPF: voter.cpf // Armazenar CPF para evitar duplicação
       };
 
-      // Registrar voto no banco de dados
-      await castVoteMutation.mutateAsync(voteData);
+      votes.push(newVote);
+      localStorage.setItem("votes", JSON.stringify(votes));
 
-      // 🔊 Tocar som de urna
+      // Tocar som de urna
       playBallotSound();
 
+      // Mostrar confirmação
+      setShowConfirmation(true);
+
       toast({
-        title: "Voto Computado com Sucesso!",
-        description: `Você votou em ${candidate?.name}. Obrigado!`,
+        title: "✅ Voto Registrado",
+        description: `Seu voto em ${candidate.name} foi registrado com sucesso!`,
         className: "bg-green-600 text-white border-none"
       });
 
-      // Limpar sessão atual
+      // Limpar dados do eleitor
       localStorage.removeItem("currentVoter");
-      setTimeout(() => setLocation("/"), 2000);
+
+      // Redirecionar após 3 segundos
+      setTimeout(() => {
+        setLocation("/");
+      }, 3000);
+
     } catch (error: any) {
-      console.error("Erro ao votar:", error);
+      console.error("Erro ao registrar voto:", error);
       toast({
-        title: "Erro ao votar",
-        description: error.message || "Não foi possível registrar seu voto. Tente novamente.",
+        title: "Erro",
+        description: error.message || "Não foi possível registrar seu voto.",
         variant: "destructive"
       });
-    } finally {
       setIsVoting(false);
     }
   };
 
-  // Funções Administrativas (Simuladas aqui para o protótipo, mas deveriam estar no admin)
-  const handlePartialResult = () => {
-    const votes = JSON.parse(localStorage.getItem("votes") || "[]");
-    const counts = votes.reduce((acc: any, vote: any) => {
-      acc[vote.candidateName] = (acc[vote.candidateName] || 0) + 1;
-      return acc;
-    }, {});
-    
-    let resultText = "Resultado Parcial:\n";
-    Object.entries(counts).forEach(([name, count]) => {
-      resultText += `${name}: ${count} votos\n`;
-    });
-    
-    alert(resultText || "Nenhum voto computado ainda.");
-  };
+  if (!voter) {
+    return (
+      <Layout>
+        <div className="flex items-center justify-center min-h-screen">
+          <Loader className="w-8 h-8 animate-spin text-blue-400" />
+        </div>
+      </Layout>
+    );
+  }
 
-  const handlePersistSimulation = () => {
-    alert("Simulação estatística persistida com sucesso! (Dados salvos no LocalStorage)");
-  };
-
-  const handleClearAll = () => {
-    if (confirm("Tem certeza que deseja limpar todos os votos e candidatos?")) {
-      localStorage.removeItem("votes");
-      alert("Sistema resetado com sucesso.");
-      window.location.reload();
-    }
-  };
+  if (showConfirmation) {
+    return (
+      <Layout>
+        <div className="flex flex-col items-center justify-center min-h-screen text-center">
+          <CheckCircle2 className="w-20 h-20 text-green-400 mb-6 animate-bounce" />
+          <h2 className="text-3xl font-bold text-white mb-2">Voto Registrado!</h2>
+          <p className="text-gray-300 mb-8">Seu voto foi computado com sucesso.</p>
+          <p className="text-gray-400">Redirecionando para a página inicial...</p>
+        </div>
+      </Layout>
+    );
+  }
 
   return (
-    <Layout className="py-4">
-      <div className="glass-panel rounded-3xl p-6 w-full max-w-5xl mx-auto animate-in fade-in duration-500">
-        
+    <Layout>
+      <div className="w-full max-w-4xl mx-auto p-4 space-y-6">
         {/* Header */}
-        <div className="flex justify-between items-center mb-6">
-          <Button variant="ghost" onClick={() => setLocation("/cadastro")} className="text-white hover:bg-white/10 gap-2">
-            <ArrowLeft className="w-4 h-4" /> Voltar
-          </Button>
-          <div className="text-center hidden md:block">
-            <h2 className="text-2xl font-bold text-white">Cédula Eleitoral Digital</h2>
-            <p className="text-sm text-gray-300">Eleitor: {voter?.name} ({voter?.municipio})</p>
+        <div className="flex items-center justify-between mb-6">
+          <h1 className="text-3xl font-bold text-white">Urna Eletrônica</h1>
+          <div className="flex gap-2">
+            <Button onClick={() => setLocation("/")} variant="outline" className="text-white">
+              <ArrowLeft className="w-4 h-4 mr-2" /> Voltar
+            </Button>
+            <Button onClick={() => { localStorage.removeItem("currentVoter"); setLocation("/"); }} variant="destructive">
+              <LogOut className="w-4 h-4 mr-2" /> Sair
+            </Button>
           </div>
-          <Button variant="destructive" onClick={() => setLocation("/")} className="gap-2 bg-red-500/80 hover:bg-red-600">
-            <LogOut className="w-4 h-4" /> Sair
-          </Button>
         </div>
 
-        {/* Mobile Header Info */}
-        <div className="md:hidden text-center mb-6">
-          <h2 className="text-xl font-bold text-white">Cédula Digital</h2>
-          <p className="text-xs text-gray-300">{voter?.name} - {voter?.municipio}</p>
-        </div>
-
-        {/* Grid de Candidatos */}
-        <div className="grid grid-cols-2 md:grid-cols-3 gap-4 mb-8">
-          {CANDIDATES.map((candidate) => (
-            <div 
-              key={candidate.id}
-              onClick={() => !isVoting && setSelectedCandidate(candidate.id)}
-              className={`relative group cursor-pointer rounded-xl overflow-hidden transition-all duration-300 ${
-                selectedCandidate === candidate.id 
-                  ? 'ring-4 ring-green-500 scale-105 shadow-[0_0_20px_rgba(0,255,0,0.3)]' 
-                  : 'hover:scale-105 hover:shadow-lg opacity-80 hover:opacity-100'
-              } ${isVoting ? 'opacity-50 cursor-not-allowed' : ''}`}
-            >
-              <div className="aspect-square bg-gray-800 relative">
-                <img 
-                  src={candidate.image} 
-                  alt={candidate.name}
-                  className="w-full h-full object-cover"
-                />
-                <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/20 to-transparent flex flex-col justify-end p-3">
-                  <span className="text-3xl font-bold text-white mb-1">{candidate.number}</span>
-                  <span className="text-sm font-medium text-gray-200 leading-tight">{candidate.name}</span>
-                </div>
-                
-                {selectedCandidate === candidate.id && (
-                  <div className="absolute top-2 right-2 bg-green-500 text-white p-1 rounded-full shadow-lg animate-in zoom-in">
-                    <CheckCircle2 className="w-6 h-6" />
-                  </div>
-                )}
-              </div>
+        {/* Informações do Eleitor */}
+        <div className="bg-white/5 rounded-2xl p-6 border border-white/10">
+          <h3 className="text-white font-bold mb-4">Eleitor</h3>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div>
+              <p className="text-gray-400 text-sm">Nome</p>
+              <p className="text-white font-semibold">{voter.nome}</p>
             </div>
-          ))}
+            <div>
+              <p className="text-gray-400 text-sm">Município</p>
+              <p className="text-white font-semibold">{voter.municipio}</p>
+            </div>
+            <div>
+              <p className="text-gray-400 text-sm">Bairro</p>
+              <p className="text-white font-semibold">{voter.bairro}</p>
+            </div>
+          </div>
         </div>
 
-        {/* Botão de Votar */}
-        <div className="flex justify-center mb-8">
-          <Button 
+        {/* Seleção de Candidato */}
+        <div className="bg-white/5 rounded-2xl p-8 border border-white/10">
+          <h2 className="text-2xl font-bold text-white mb-6 text-center">Escolha seu Candidato</h2>
+          
+          {candidatos.length === 0 ? (
+            <div className="text-center py-12">
+              <p className="text-gray-400">Nenhum candidato cadastrado.</p>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {candidatos.map((candidate) => (
+                <button
+                  key={candidate.number}
+                  onClick={() => setSelectedCandidate(candidate.number)}
+                  className={`p-6 rounded-xl border-2 transition-all ${
+                    selectedCandidate === candidate.number
+                      ? "border-blue-500 bg-blue-500/10"
+                      : "border-white/10 bg-black/20 hover:border-white/20"
+                  }`}
+                >
+                  <div className="text-center">
+                    <p className="text-4xl font-bold text-blue-400 mb-2">{candidate.number}</p>
+                    <p className="text-white font-semibold text-lg">{candidate.name}</p>
+                    <p className="text-gray-400 text-sm mt-2">{candidate.party || "Sem partido"}</p>
+                  </div>
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+
+        {/* Botão Confirmar Voto */}
+        <div className="flex justify-center">
+          <Button
             onClick={handleVote}
-            disabled={!selectedCandidate || isVoting || castVoteMutation.isPending}
-            className={`w-full md:w-1/2 h-16 text-xl font-bold transition-all gap-2 ${
-              selectedCandidate && !isVoting
-                ? 'bg-gradient-to-r from-green-600 to-green-500 hover:from-green-500 hover:to-green-400 shadow-[0_0_30px_rgba(0,255,0,0.4)] animate-pulse' 
-                : 'bg-gray-600 cursor-not-allowed opacity-50'
-            }`}
+            disabled={!selectedCandidate || isVoting}
+            className="px-12 py-4 bg-green-600 hover:bg-green-700 text-white text-lg font-bold"
           >
-            {isVoting || castVoteMutation.isPending ? (
+            {isVoting ? (
               <>
-                <Loader className="w-5 h-5 animate-spin" />
-                PROCESSANDO...
+                <Loader className="w-5 h-5 mr-2 animate-spin" />
+                Registrando Voto...
               </>
             ) : (
-              selectedCandidate ? 'CONFIRMAR VOTO' : 'SELECIONE UM CANDIDATO'
+              "Confirmar Voto"
             )}
           </Button>
         </div>
-
-        {/* Botões de Controle (Requisitados na Tela 2) */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-3 border-t border-white/10 pt-6">
-          <Button 
-            variant="outline" 
-            onClick={handlePartialResult}
-            disabled={isVoting}
-            className="bg-blue-500/10 border-blue-500/30 text-blue-200 hover:bg-blue-500/20 disabled:opacity-50"
-          >
-            I - Ver Resultado Parcial
-          </Button>
-          <Button 
-            variant="outline" 
-            onClick={handlePersistSimulation}
-            disabled={isVoting}
-            className="bg-yellow-500/10 border-yellow-500/30 text-yellow-200 hover:bg-yellow-500/20 disabled:opacity-50"
-          >
-            II - Persistir Simulação
-          </Button>
-          <Button 
-            variant="outline" 
-            onClick={handleClearAll}
-            disabled={isVoting}
-            className="bg-red-500/10 border-red-500/30 text-red-200 hover:bg-red-500/20 disabled:opacity-50"
-          >
-            III - Limpar Tudo
-          </Button>
-        </div>
-
       </div>
     </Layout>
   );

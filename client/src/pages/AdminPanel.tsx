@@ -36,7 +36,7 @@ export default function AdminPanel() {
     });
   };
 
-  // 4 - Função para Limpar Cadastrados (Candidatos)
+  // Função para Limpar Candidatos
   const limparCandidatos = () => {
     if (confirm("Deseja apagar TODOS os candidatos cadastrados?")) {
       localStorage.removeItem("candidatos");
@@ -50,6 +50,15 @@ export default function AdminPanel() {
     if (confirm("Deseja apagar TODOS os votos registrados?")) {
       localStorage.removeItem("votes");
       toast({ title: "Sucesso", description: "Votos zerados!" });
+      setTimeout(() => window.location.reload(), 1000);
+    }
+  };
+
+  // Função para Limpar Eleitores Cadastrados
+  const limparEleitores = () => {
+    if (confirm("Deseja apagar TODOS os eleitores cadastrados?")) {
+      localStorage.removeItem("voters");
+      toast({ title: "Sucesso", description: "Eleitores removidos!" });
       setTimeout(() => window.location.reload(), 1000);
     }
   };
@@ -100,21 +109,28 @@ export default function AdminPanel() {
           </div>
         </div>
 
-        {/* 4 - Botão Limpar Cadastrados */}
-        <div className="flex gap-4">
+        {/* Botões de Limpeza */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <Button 
             onClick={limparCandidatos}
             variant="destructive"
-            className="flex-1 h-14 font-bold border-2 border-red-900 shadow-lg"
+            className="h-14 font-bold border-2 border-red-900 shadow-lg"
           >
-            <Trash2 className="mr-2" /> LIMPAR CANDIDATOS CADASTRADOS
+            <Trash2 className="mr-2" /> LIMPAR CANDIDATOS
           </Button>
           
           <Button 
             onClick={zerarVotos}
-            className="flex-1 h-14 bg-amber-600 hover:bg-amber-700 font-bold"
+            className="h-14 bg-amber-600 hover:bg-amber-700 font-bold"
           >
-            🔄 ZERAR APENAS VOTOS
+            🔄 ZERAR VOTOS
+          </Button>
+
+          <Button 
+            onClick={limparEleitores}
+            className="h-14 bg-purple-600 hover:bg-purple-700 font-bold"
+          >
+            👥 LIMPAR ELEITORES
           </Button>
         </div>
       </div>

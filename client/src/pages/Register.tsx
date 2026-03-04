@@ -213,7 +213,7 @@ export default function Register() {
               value={formData.name}
               onChange={handleNameChange}
               placeholder="Digite seu nome completo"
-              className="bg-white text-black p-3 rounded w-full"
+              className="bg-slate-800 text-white p-3 rounded w-full border border-slate-600"
               disabled={isSubmitting}
             />
           </div>
@@ -228,7 +228,7 @@ export default function Register() {
                 onChange={handleCPFChange}
                 placeholder="000.000.000-00"
                 maxLength={14}
-                className="bg-white text-black p-3 rounded w-full pr-12"
+                className="bg-slate-800 text-white p-3 rounded w-full pr-12 border border-slate-600"
                 disabled={isSubmitting}
               />
               {validation.cpf.isTouched && (
@@ -259,7 +259,7 @@ export default function Register() {
                 onChange={handleDateChange}
                 placeholder="DD/MM/AAAA"
                 maxLength={10}
-                className="bg-white text-black p-3 rounded w-full pr-12"
+                className="bg-slate-800 text-white p-3 rounded w-full pr-12 border border-slate-600"
                 disabled={isSubmitting}
               />
               {validation.birthDate.isTouched && (

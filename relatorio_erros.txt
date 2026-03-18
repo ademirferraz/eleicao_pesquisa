@@ -1,0 +1,37 @@
+Relatório de Análise Técnica - Projeto Eleição Pesquisa
+
+Este documento detalha os erros, inconsistências e pontos de melhoria identificados no projeto Flutter, com foco em estabilidade e compatibilidade multi-plataforma (iOS, Android e Web).
+
+1. ARQUITETURA E GERENCIAMENTO DE ESTADO
+- Problema: O projeto utiliza um estado global simples em 'lib/globals.dart'.
+- Impacto: A Interface de Usuário (UI) não é reativa. Quando dados são alterados no Admin, as outras telas não atualizam automaticamente a menos que o app seja reiniciado ou o estado seja forçado manualmente.
+- Recomendação: Implementar um gerenciador de estado como Provider, Riverpod ou Bloc.
+
+2. PERSISTÊNCIA DE DADOS (HIVE)
+- Problema: Os modelos 'Candidato' e 'Eleitor' estão configurados para o Hive, mas o arquivo 'lib/main.dart' não inicializa o banco de dados nem abre as "vagas" (boxes).
+- Impacto: O aplicativo irá crashar ao tentar salvar qualquer voto ou candidato, e todos os dados serão perdidos ao fechar o app.
+- Recomendação: Adicionar 'await Hive.initFlutter()' e 'await Hive.openBox(...)' no 'main()'.
+
+3. DUPLICAÇÃO DE ARQUIVOS
+- Problema: Existem arquivos de tela idênticos ou similares em 'lib/' e 'lib/screens/' (ex: 'tela_admin.dart').
+- Impacto: Extrema dificuldade de manutenção e risco de corrigir um erro em um arquivo enquanto o app executa o outro.
+- Recomendação: Padronizar e manter todas as telas apenas dentro de 'lib/screens/'.
+
+4. COMPATIBILIDADE MULTIPLATAFORMA (iOS, Android, Web)
+- iOS/Android: O 'FilePicker' e notificações exigem permissões explícitas. Atualmente, o 'AndroidManifest.xml' e 'Info.plist' não parecem configurados para acesso à galeria de fotos.
+- Web: O uso de 'FilePicker' com 'bytes' está correto para Web, mas a persistência do Hive no navegador requer configuração específica ('hive_flutter').
+- Notificações: O código de notificações em 'notification_utils.dart' está incompleto para Android 13+ (falta permissão POST_NOTIFICATIONS).
+
+5. LÓGICA DE NEGÓCIO E SEGURANÇA
+- Senha Admin: A senha está fixa como "123" no código ('globals.dart'). Se alterada via UI, a nova senha é perdida ao reiniciar o app.
+- Reset de Votos: A função 'resetarVotos' limpa as listas em memória mas não limpa os dados salvos no disco/Hive (quando implementado).
+- Imagens: O salvamento de fotos como 'Uint8List' dentro do objeto do candidato pode tornar o banco de dados lento se houver muitos candidatos com fotos pesadas.
+
+6. INTERFACE E USABILIDADE (UI/UX)
+- Validação: O formulário de cadastro não possui limites de caracteres para o campo de mensagem.
+- Feedback: Falta um indicador de carregamento (CircularProgressIndicator) ao escolher fotos ou processar o voto, o que pode dar a impressão de que o app travou.
+- Layout: O gráfico de resultados é muito simples (LinearProgressIndicator). Para um app profissional, recomenda-se o uso do 'fl_chart' (já listado no pubspec.yaml mas não utilizado).
+
+---
+Fim do Relatório.
+Gerado por Antigravity AI.
